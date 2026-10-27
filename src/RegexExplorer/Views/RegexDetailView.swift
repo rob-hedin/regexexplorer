@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Edits one saved regex: its pattern, options and test text, with live, read-only results.
@@ -57,17 +58,26 @@ private struct PatternField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel("Pattern")
-            TextField("Pattern", text: $pattern, prompt: Text("Type a regular expression"))
-                .labelsHidden()
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 14, design: .monospaced))
-                .autocorrectionDisabled()
-                .focused(isFocused)
-                .overlay {
-                    if errorMessage != nil {
-                        RoundedRectangle(cornerRadius: 6).stroke(.red, lineWidth: 1.5)
+            HStack(spacing: 6) {
+                TextField("Pattern", text: $pattern, prompt: Text("Type a regular expression"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 14, design: .monospaced))
+                    .autocorrectionDisabled()
+                    .focused(isFocused)
+                    .overlay {
+                        if errorMessage != nil {
+                            RoundedRectangle(cornerRadius: 6).stroke(.red, lineWidth: 1.5)
+                        }
                     }
+                Button("Copy Pattern", systemImage: "doc.on.doc") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(pattern, forType: .string)
                 }
+                .labelStyle(.iconOnly)
+                .disabled(pattern.isEmpty)
+                .help("Copy the pattern")
+            }
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.circle")
                     .font(.callout)
