@@ -77,7 +77,7 @@ struct RegexTransformsTests {
     @Test func invertedKeepsLinesWithoutAMatch() {
         let result = LineFilter.filter(lines, matches: matches(domainPattern, in: lines), inverted: true)
         #expect(result.lines.map(\.number) == [2, 4])
-        #expect(result.lines.allSatisfy(\.matchRanges.isEmpty))
+        #expect(result.lines.allSatisfy { $0.matchRanges.isEmpty })
     }
 
     @Test func finalNewlineDoesNotAddALine() {
