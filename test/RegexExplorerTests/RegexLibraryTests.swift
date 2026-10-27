@@ -3,12 +3,16 @@ import Testing
 @testable import RegexExplorer
 
 @MainActor
-struct RegexLibraryTests {
+final class RegexLibraryTests {
     let store = RegexLibraryStore(
         fileURL: FileManager.default.temporaryDirectory
             .appending(path: "RegexLibraryTests-\(UUID().uuidString)", directoryHint: .isDirectory)
             .appending(path: "regexes.json")
     )
+
+    deinit {
+        try? FileManager.default.removeItem(at: store.fileURL.deletingLastPathComponent())
+    }
 
     @Test func addedRegexesGetUniqueNames() {
         let library = RegexLibrary(store: store)

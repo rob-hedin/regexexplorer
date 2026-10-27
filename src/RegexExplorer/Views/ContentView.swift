@@ -3,6 +3,7 @@ import SwiftUI
 /// The main window: saved regexes on the left, the selected one's editor on the right.
 struct ContentView: View {
     @Environment(RegexLibrary.self) private var library
+    @Environment(\.openWindow) private var openWindow
     @State private var selection: SavedRegex.ID?
 
     var body: some View {
@@ -19,6 +20,15 @@ struct ContentView: View {
                     systemImage: "text.magnifyingglass",
                     description: Text("Choose a regex from the list, or click + to create one.")
                 )
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Cheat Sheet", systemImage: "book.closed") {
+                    openWindow(id: CheatSheetView.windowID)
+                }
+                .labelStyle(.titleAndIcon)
+                .help("Open the regex cheat sheet")
             }
         }
         .navigationTitle(selection.flatMap { library.regex(withID: $0)?.name } ?? "RegEx Explorer")

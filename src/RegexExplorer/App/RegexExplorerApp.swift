@@ -10,5 +10,10 @@ struct RegexExplorerApp: App {
                 .environment(library)
         }
         .defaultSize(width: 1200, height: 780)
+
+        Window("Regex Cheat Sheet", id: CheatSheetView.windowID) {
+            CheatSheetView()
+        }
+        .defaultSize(width: 560, height: 780)
     }
 }

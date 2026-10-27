@@ -2,9 +2,13 @@ import Foundation
 import Testing
 @testable import RegexExplorer
 
-struct RegexLibraryStoreTests {
+final class RegexLibraryStoreTests {
     let directory = FileManager.default.temporaryDirectory
         .appending(path: "RegexLibraryStoreTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+
+    deinit {
+        try? FileManager.default.removeItem(at: directory)
+    }
 
     var store: RegexLibraryStore {
         RegexLibraryStore(fileURL: directory.appending(path: "regexes.json"))

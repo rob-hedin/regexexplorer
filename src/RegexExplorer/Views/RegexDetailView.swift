@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Edits one saved regex: its pattern and test text, with live, read-only match results.
+/// Edits one saved regex: its pattern, options and test text, with live, read-only match results.
 struct RegexDetailView: View {
     @Binding var regex: SavedRegex
 
@@ -8,7 +8,10 @@ struct RegexDetailView: View {
         let evaluation = RegexEvaluator.evaluate(pattern: regex.pattern, options: regex.options, in: regex.sampleText)
 
         VStack(alignment: .leading, spacing: 18) {
-            PatternField(pattern: $regex.pattern, evaluation: evaluation)
+            VStack(alignment: .leading, spacing: 8) {
+                PatternField(pattern: $regex.pattern, evaluation: evaluation)
+                RegexOptionsBar(options: $regex.options)
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 SectionLabel("Test Text")
