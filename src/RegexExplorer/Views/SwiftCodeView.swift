@@ -5,9 +5,10 @@ import SwiftUI
 struct SwiftCodeView: View {
     let regex: SavedRegex
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("swiftCodeLanguageMode") private var languageMode = SwiftLanguageMode.swift6
 
     var body: some View {
-        let code = SwiftCodeGenerator.code(for: regex)
+        let code = SwiftCodeGenerator.code(for: regex, languageMode: languageMode)
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -32,6 +33,15 @@ struct SwiftCodeView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(code, forType: .string)
                 }
+                Picker("Language mode", selection: $languageMode) {
+                    ForEach(SwiftLanguageMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("Swift 6 uses /…/ regex literals; Swift 5 uses #/…/#, which works in both")
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)

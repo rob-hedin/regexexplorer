@@ -61,12 +61,29 @@ enum CaptureGroupScanner {
     }
 }
 
+/// The Swift language mode the generated code is written for.
+enum SwiftLanguageMode: String, CaseIterable, Identifiable, Sendable {
+    /// Uses bare /…/ regex literals where the pattern allows.
+    case swift6
+    /// Uses #/…/# regex literals, which also compile in Swift 6.
+    case swift5
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .swift6: "Swift 6"
+        case .swift5: "Swift 5"
+        }
+    }
+}
+
 /// Writes Swift code that does what the editor shows for a saved regex.
 enum SwiftCodeGenerator {
-    static func code(for regex: SavedRegex) -> String {
+    static func code(for regex: SavedRegex, languageMode: SwiftLanguageMode = .swift6) -> String {
         let source = regex.options.allowsExtendedSyntax ? "(?x)" + regex.pattern : regex.pattern
         let groups = CaptureGroupScanner.groups(in: regex.pattern, allowsExtendedSyntax: regex.options.allowsExtendedSyntax)
-        let literal = regexLiteral(for: source)
+        let literal = regexLiteral(for: source, languageMode: languageMode)
 
         var lines: [String] = []
         if let literal {
@@ -92,12 +109,19 @@ enum SwiftCodeGenerator {
     }
 
     /// The pattern as a regex literal, or `nil` if a literal can't hold it.
-    static func regexLiteral(for source: String) -> String? {
+    static func regexLiteral(for source: String, languageMode: SwiftLanguageMode = .swift6) -> String? {
         // Literals are a single line here, and Swift checks them when the code compiles.
         guard !source.isEmpty, !source.contains(where: \.isNewline) else { return nil }
 
         // Bare /…/ literals only compile in the Swift 6 language mode (or with
-        // -enable-bare-slash-regex) and can't hold every pattern, so always use #/…/#.
+        // -enable-bare-slash-regex). Even then they can't contain "/", can't start or
+        // end with whitespace, and can't start with "*" (which would read as a comment).
+        let needsDelimiters = languageMode == .swift5
+            || source.contains("/")
+            || source.first!.isWhitespace || source.last!.isWhitespace
+            || source.hasPrefix("*")
+        guard needsDelimiters else { return "/\(source)/" }
+
         var hashes = "#"
         while source.contains("/" + hashes) {
             hashes += "#"

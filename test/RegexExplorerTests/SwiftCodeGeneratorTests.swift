@@ -19,14 +19,24 @@ struct SwiftCodeGeneratorTests {
     }
 
     @Test(arguments: [
-        ("abc", "#/abc/#"),
+        ("abc", "/abc/"),
         ("a/b", "#/a/b/#"),
         (" a", "#/ a/#"),
+        ("a ", "#/a /#"),
         ("*a", "#/*a/#"),
         ("a/#b", "##/a/#b/##"),
     ])
-    func literalUsesTheFewestHashes(pattern: String, literal: String) {
-        #expect(SwiftCodeGenerator.regexLiteral(for: pattern) == literal)
+    func swift6LiteralUsesTheSimplestDelimiters(pattern: String, literal: String) {
+        #expect(SwiftCodeGenerator.regexLiteral(for: pattern, languageMode: .swift6) == literal)
+    }
+
+    @Test(arguments: [
+        ("abc", "#/abc/#"),
+        ("a/b", "#/a/b/#"),
+        ("a/#b", "##/a/#b/##"),
+    ])
+    func swift5LiteralAlwaysHasDelimiters(pattern: String, literal: String) {
+        #expect(SwiftCodeGenerator.regexLiteral(for: pattern, languageMode: .swift5) == literal)
     }
 
     @Test func multiLinePatternHasNoLiteral() {
@@ -45,7 +55,7 @@ struct SwiftCodeGeneratorTests {
             options: RegexOptions(ignoresCase: true)
         )
         #expect(SwiftCodeGenerator.code(for: regex) == #"""
-            let regex = #/(?<name>[a-z]+)\.(?<tld>[a-z]+)/#
+            let regex = /(?<name>[a-z]+)\.(?<tld>[a-z]+)/
                 .ignoresCase()
 
             let text = "swift.org"
@@ -57,6 +67,11 @@ struct SwiftCodeGeneratorTests {
             }
 
             """#)
+    }
+
+    @Test func swift5CodeUsesDelimitedLiteral() {
+        let regex = SavedRegex(name: "Domain", pattern: #"(?<name>[a-z]+)\.(?<tld>[a-z]+)"#)
+        #expect(SwiftCodeGenerator.code(for: regex, languageMode: .swift5).hasPrefix(#"let regex = #/(?<name>[a-z]+)\.(?<tld>[a-z]+)/#"#))
     }
 
     @Test func replaceModeCodeInterpolatesGroups() {
