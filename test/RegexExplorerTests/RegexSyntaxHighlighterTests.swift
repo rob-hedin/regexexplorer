@@ -37,15 +37,44 @@ struct RegexSyntaxHighlighterTests {
 
     @Test func groupPrefixesBelongToTheGroup() {
         expectRuns(#"(?<year>\d{4})(?:a|b)(?=c)(?<!d)(?i)"#, [
-            (.group, "(?<year>"),
+            (.group(1), "(?<year>"),
             (.escape, #"\d"#),
             (.quantifier, "{4}"),
-            (.group, ")(?:"),
+            (.group(1), ")"),
+            (.group(nil), "(?:"),
             (.alternation, "|"),
-            (.group, ")(?="),
-            (.group, ")(?<!"),
-            (.group, ")(?i)"),
+            (.group(nil), ")(?="),
+            (.group(nil), ")(?<!"),
+            (.group(nil), ")(?i)"),
         ])
+    }
+
+    @Test func groupsAreNumberedLikeTheResults() {
+        expectRuns("((a)(?:b)(?<n>c))(d)", [
+            (.group(1), "("),
+            (.group(2), "("),
+            (.group(2), ")"),
+            (.group(nil), "(?:"),
+            (.group(nil), ")"),
+            (.group(3), "(?<n>"),
+            (.group(3), ")"),
+            (.group(1), ")"),
+            (.group(4), "("),
+            (.group(4), ")"),
+        ])
+    }
+
+    @Test func groupNumbersAgreeWithTheScanner() {
+        let pattern = #"(?<year>\d{4})-(\d{2})(?:-(?'day'\d{2}))?(?P<z>z)(?=x)"#
+        var numbers: [Int] = []
+        for token in RegexSyntaxHighlighter.tokens(in: pattern) {
+            if case .group(let number?) = token.kind, !numbers.contains(number) { numbers.append(number) }
+        }
+        #expect(numbers == Array(1...CaptureGroupScanner.groups(in: pattern).count))
+    }
+
+    @Test func anUnmatchedCloseParenDoesNotCapture() {
+        expectRuns("a)", [(.group(nil), ")")])
     }
 
     @Test func quantifiersIncludeLazyAndPossessiveMarks() {
@@ -109,9 +138,9 @@ struct RegexSyntaxHighlighterTests {
     }
 
     @Test func halfTypedPatternsStillColor() {
-        expectRuns("(?<na", [(.group, "(?<na")])
+        expectRuns("(?<na", [(.group(1), "(?<na")])
         expectRuns("[abc", [(.characterClass, "[abc")])
-        expectRuns("(a", [(.group, "(")])
+        expectRuns("(a", [(.group(1), "(")])
     }
 
     @Test func tokensNeverOverlapAndStayInBounds() {

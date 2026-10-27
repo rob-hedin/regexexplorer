@@ -4,8 +4,9 @@ enum RegexSyntaxKind: Sendable, Equatable {
     case escape
     /// A custom class such as `[a-z]`, a POSIX class, or the `.` wildcard.
     case characterClass
-    /// The parentheses of a group and its prefix, such as `(?:`, `(?<name>` or `(?=`.
-    case group
+    /// The parentheses of a group and its prefix, such as `(?:`, `(?<name>` or `(?=`, with the
+    /// capture group's number, or `nil` for a group that doesn't capture.
+    case group(Int?)
     /// A quantifier such as `*`, `+?` or `{2,4}`.
     case quantifier
     /// `^`, `$`, or an anchor escape such as `\b` or `\A`.
@@ -34,6 +35,9 @@ enum RegexSyntaxHighlighter {
         var tokens: [RegexSyntaxToken] = []
         var index = 0
         var classDepth = 0
+        var captureCount = 0
+        /// The number of each open group, or `nil` for one that doesn't capture.
+        var openGroups: [Int?] = []
 
         func emit(_ kind: RegexSyntaxKind, _ start: Int, _ end: Int) {
             guard start < end else { return }
@@ -152,6 +156,28 @@ enum RegexSyntaxHighlighter {
             return offset
         }
 
+        /// Whether the group opening at `start` captures, numbered in the same order as Swift Regex.
+        func capturesGroup(at start: Int) -> Bool {
+            switch character(at: start + 1) {
+            case "?":
+                switch character(at: start + 2) {
+                case "<":
+                    if let next = character(at: start + 3), next == "=" || next == "!" { return false }
+                    return true
+                case "'":
+                    return true
+                case "P":
+                    return character(at: start + 3) == "<"
+                default:
+                    return false
+                }
+            case "*":
+                return false
+            default:
+                return true
+            }
+        }
+
         while index < characters.count {
             let current = characters[index]
 
@@ -198,10 +224,21 @@ enum RegexSyntaxHighlighter {
                 index = end
             case "(":
                 let end = groupOpeningEnd(from: index)
-                emit(.group, index, end)
+                if characters[end - 1] == ")" {
+                    // Inline flags such as (?i) open no group.
+                    emit(.group(nil), index, end)
+                } else {
+                    var number: Int?
+                    if capturesGroup(at: index) {
+                        captureCount += 1
+                        number = captureCount
+                    }
+                    openGroups.append(number)
+                    emit(.group(number), index, end)
+                }
                 index = end
             case ")":
-                emit(.group, index, index + 1)
+                emit(.group(openGroups.popLast() ?? nil), index, index + 1)
                 index += 1
             case "*", "+", "?":
                 let end = quantifierEnd(from: index + 1)

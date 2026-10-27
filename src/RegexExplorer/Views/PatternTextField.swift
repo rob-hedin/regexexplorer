@@ -92,14 +92,17 @@ struct PatternTextField: NSViewRepresentable {
 
     private static let font = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
 
+    /// A capture group's parentheses take its colour in the results, so the other kinds
+    /// use colours that the groups don't.
     static func color(for kind: RegexSyntaxKind) -> NSColor {
         switch kind {
         case .escape: .systemBrown
-        case .characterClass: .systemBlue
-        case .group: .systemPurple
-        case .quantifier: .systemOrange
-        case .anchor, .alternation: .systemPink
-        case .comment: .secondaryLabelColor
+        case .characterClass: .systemGreen
+        case .group(let number?): NSColor(MatchPresentation.color(forGroup: number))
+        case .group(nil): .secondaryLabelColor
+        case .quantifier: .systemRed
+        case .anchor, .alternation: .systemIndigo
+        case .comment: .tertiaryLabelColor
         }
     }
 
