@@ -17,8 +17,8 @@ struct ContentView: View {
         return (try? RegexEvaluator.makeRegex(pattern: regex.pattern, options: regex.options)) != nil
     }
 
-    private var showSwiftCodeAction: (() -> Void)? {
-        canShowSwiftCode ? { isShowingSwiftCode = true } : nil
+    private var showSwiftCodeAction: SwiftCodeAction? {
+        canShowSwiftCode ? SwiftCodeAction { isShowingSwiftCode = true } : nil
     }
 
     var body: some View {
