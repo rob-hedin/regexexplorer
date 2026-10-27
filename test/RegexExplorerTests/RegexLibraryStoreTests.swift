@@ -23,7 +23,8 @@ final class RegexLibraryStoreTests {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let regexes = [
             SavedRegex(name: "Domain", pattern: #"[a-z0-9-]+(\.[a-z0-9-]+)+"#, sampleText: "example.com",
-                       options: RegexOptions(ignoresCase: true), createdAt: date),
+                       options: RegexOptions(ignoresCase: true), mode: .replace, replacement: "<$0>",
+                       invertsFilter: true, createdAt: date),
             SavedRegex(name: "Digits", pattern: #"\d+"#, createdAt: date),
         ]
         try store.save(regexes)
@@ -46,6 +47,9 @@ final class RegexLibraryStoreTests {
         #expect(regex.pattern == "")
         #expect(regex.sampleText == "")
         #expect(regex.options == RegexOptions())
+        #expect(regex.mode == .match)
+        #expect(regex.replacement == "")
+        #expect(!regex.invertsFilter)
     }
 
     @Test func unreadableFileIsMovedAside() throws {

@@ -61,4 +61,17 @@ enum MatchPresentation {
         }
         return result
     }
+
+    /// The text with the given character ranges on a highlighted background.
+    static func highlighted(_ text: String, ranges: [Range<Int>]) -> AttributedString {
+        var result = AttributedString(text)
+        let characters = result.characters
+        let count = characters.count
+        for range in ranges where !range.isEmpty && range.upperBound <= count {
+            let lower = characters.index(characters.startIndex, offsetBy: range.lowerBound)
+            let upper = characters.index(lower, offsetBy: range.count)
+            result[lower..<upper].backgroundColor = Color.accentColor.opacity(0.2)
+        }
+        return result
+    }
 }

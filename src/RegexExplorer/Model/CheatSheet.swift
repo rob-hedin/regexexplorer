@@ -59,6 +59,12 @@ enum CheatSheet {
             ("(?s)", ". matches newlines"),
             ("(?x)", "Ignore whitespace"),
         ]),
+        section("Replacement", [
+            ("$0", "The whole match"),
+            ("$1", "Group 1"),
+            ("${name}", "The group called name"),
+            ("$$", "A literal $"),
+        ]),
     ]
 
     /// The sections, keeping only entries whose token or meaning contains `query`.

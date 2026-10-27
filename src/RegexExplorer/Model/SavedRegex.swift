@@ -8,6 +8,12 @@ struct SavedRegex: Identifiable, Codable, Hashable, Sendable {
     var pattern: String
     var sampleText: String
     var options: RegexOptions
+    /// Which kind of result the editor shows.
+    var mode: ExplorerMode
+    /// The replacement template used in Replace mode, such as `<${name}>`.
+    var replacement: String
+    /// In Filter mode, keep the lines without a match instead of those with one.
+    var invertsFilter: Bool
     var createdAt: Date
     var modifiedAt: Date
 
@@ -17,6 +23,9 @@ struct SavedRegex: Identifiable, Codable, Hashable, Sendable {
         pattern: String = "",
         sampleText: String = "",
         options: RegexOptions = RegexOptions(),
+        mode: ExplorerMode = .match,
+        replacement: String = "",
+        invertsFilter: Bool = false,
         createdAt: Date = .now,
         modifiedAt: Date? = nil
     ) {
@@ -25,6 +34,9 @@ struct SavedRegex: Identifiable, Codable, Hashable, Sendable {
         self.pattern = pattern
         self.sampleText = sampleText
         self.options = options
+        self.mode = mode
+        self.replacement = replacement
+        self.invertsFilter = invertsFilter
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt ?? createdAt
     }
@@ -38,7 +50,31 @@ struct SavedRegex: Identifiable, Codable, Hashable, Sendable {
         pattern = try container.decodeIfPresent(String.self, forKey: .pattern) ?? ""
         sampleText = try container.decodeIfPresent(String.self, forKey: .sampleText) ?? ""
         options = try container.decodeIfPresent(RegexOptions.self, forKey: .options) ?? RegexOptions()
+        // An unknown mode, perhaps from a newer version, falls back to Match rather than failing the whole file.
+        mode = try container.decodeIfPresent(String.self, forKey: .mode).flatMap(ExplorerMode.init(rawValue:)) ?? .match
+        replacement = try container.decodeIfPresent(String.self, forKey: .replacement) ?? ""
+        invertsFilter = try container.decodeIfPresent(Bool.self, forKey: .invertsFilter) ?? false
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
         modifiedAt = try container.decodeIfPresent(Date.self, forKey: .modifiedAt) ?? createdAt
+    }
+}
+
+/// What the editor does with a regex's matches.
+enum ExplorerMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    /// List the matches and their capture groups.
+    case match
+    /// Replace each match using a template.
+    case replace
+    /// Keep only the lines that contain a match (or only those that don't).
+    case filter
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .match: "Match"
+        case .replace: "Replace"
+        case .filter: "Filter"
+        }
     }
 }

@@ -1,11 +1,17 @@
 import SwiftUI
 
-/// Edits one saved regex: its pattern, options and test text, with live, read-only match results.
+/// Edits one saved regex: its pattern, options and test text, with live, read-only results.
 struct RegexDetailView: View {
     @Binding var regex: SavedRegex
 
     var body: some View {
-        let evaluation = RegexEvaluator.evaluate(pattern: regex.pattern, options: regex.options, in: regex.sampleText)
+        // Replace and Filter need every match to be correct; only the match list is capped.
+        let evaluation = RegexEvaluator.evaluate(
+            pattern: regex.pattern,
+            options: regex.options,
+            in: regex.sampleText,
+            matchLimit: regex.mode == .match ? RegexEvaluator.defaultMatchLimit : .max
+        )
 
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
@@ -25,7 +31,7 @@ struct RegexDetailView: View {
                     .accessibilityLabel("Test text")
             }
 
-            MatchResultsView(text: regex.sampleText, evaluation: evaluation)
+            ResultsView(regex: $regex, evaluation: evaluation)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
