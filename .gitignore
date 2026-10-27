@@ -70,3 +70,6 @@ fastlane/test_output
 
 # Xcode build output when built with -derivedDataPath
 DerivedData/
+
+# Release archives, exports and disk images (docs/releasing.md)
+/build/

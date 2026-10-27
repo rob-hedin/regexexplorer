@@ -34,6 +34,20 @@ xcrun stapler staple build/export/RegexExplorer.app
 `ExportOptions.plist` needs `method` set to `developer-id` and your `teamID`.
 Create the keychain profile once with `xcrun notarytool store-credentials`.
 
+## Disk image for easy installing
+
+After exporting the notarized app, build a disk image that opens with the app
+beside a link to Applications, so installing is a drag:
+
+```sh
+scripts/make-dmg.sh build/export/RegexExplorer.app <profile>
+```
+
+The script copies the app into `build/RegexExplorer.dmg`, signs the disk image with
+your Developer ID Application certificate, notarizes it and staples the ticket, so
+Gatekeeper accepts it even offline. Set `SIGNING_IDENTITY` if you have more than one
+Developer ID certificate. Share the `.dmg` instead of the zip.
+
 ## Mac App Store
 
 1. Create the app record in App Store Connect with the same bundle identifier.
