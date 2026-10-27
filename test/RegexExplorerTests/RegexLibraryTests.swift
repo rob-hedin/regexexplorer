@@ -66,4 +66,32 @@ final class RegexLibraryTests {
         let siblings = try FileManager.default.contentsOfDirectory(atPath: store.fileURL.deletingLastPathComponent().path(percentEncoded: false))
         #expect(siblings.contains { $0.hasPrefix("regexes.unreadable-") })
     }
+
+    @Test func startersAreSavedWhenNothingHasBeenSaved() {
+        let starters = [SavedRegex(name: "Zip", pattern: #"^\d{5}$"#), SavedRegex(name: "Integer", pattern: #"^-?\d+$"#)]
+        let library = RegexLibrary(store: store, starterRegexes: starters)
+        #expect(library.regexes == starters)
+        // Saved dates lose their fractional seconds, so compare what was saved by name and pattern.
+        let reloaded = RegexLibrary(store: store).regexes
+        #expect(reloaded.map(\.name) == ["Zip", "Integer"])
+        #expect(reloaded.map(\.pattern) == starters.map(\.pattern))
+    }
+
+    @Test func startersAreNotAddedWhenTheUserDeletedEverything() throws {
+        try store.save([])
+        let library = RegexLibrary(store: store, starterRegexes: [SavedRegex(name: "Zip")])
+        #expect(library.regexes.isEmpty)
+    }
+
+    @Test func startersAreNotAddedWhenTheFileWasUnreadable() throws {
+        try FileManager.default.createDirectory(
+            at: store.fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("not json".utf8).write(to: store.fileURL)
+
+        let library = RegexLibrary(store: store, starterRegexes: [SavedRegex(name: "Zip")])
+        #expect(library.regexes.isEmpty)
+        #expect(library.lastError != nil)
+    }
 }

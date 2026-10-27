@@ -11,9 +11,16 @@ final class RegexLibrary {
 
     @ObservationIgnored private let store: RegexLibraryStore
 
-    init(store: RegexLibraryStore) {
+    /// Loads the library from `store`. If nothing has been saved yet, the library starts
+    /// with `starterRegexes` and saves them; an existing file, even an empty one, is never added to.
+    init(store: RegexLibraryStore, starterRegexes: [SavedRegex] = []) {
         self.store = store
-        load()
+        if !starterRegexes.isEmpty, !store.fileExists {
+            regexes = starterRegexes
+            persist()
+        } else {
+            load()
+        }
     }
 
     func regex(withID id: SavedRegex.ID) -> SavedRegex? {

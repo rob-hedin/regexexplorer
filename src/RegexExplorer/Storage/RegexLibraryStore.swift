@@ -25,9 +25,14 @@ struct RegexLibraryStore: Sendable {
         )
     }
 
+    /// Whether anything has been saved yet.
+    var fileExists: Bool {
+        FileManager.default.fileExists(atPath: fileURL.path(percentEncoded: false))
+    }
+
     /// Loads the saved regexes. A missing file means nothing has been saved yet.
     func load() throws -> [SavedRegex] {
-        guard FileManager.default.fileExists(atPath: fileURL.path(percentEncoded: false)) else {
+        guard fileExists else {
             return []
         }
         let data = try Data(contentsOf: fileURL)
