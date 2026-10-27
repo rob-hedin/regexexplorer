@@ -3,7 +3,9 @@
 A macOS app for building, testing and reusing named regular expressions.
 
 Keep a library of regexes (such as "Email Address" or "IPv4 Address"), each with
-its own test text, and see the results update as you type:
+its own test text, and see the results update as you type. The pattern is
+coloured by syntax (groups, classes, quantifiers, escapes and anchors) as you type it.
+Results show in one of three modes:
 
 - **Match:** every match highlighted, with capture groups underlined in colour
   and listed in a table.

@@ -4,7 +4,7 @@ import SwiftUI
 /// Edits one saved regex: its pattern, options and test text, with live, read-only results.
 struct RegexDetailView: View {
     @Binding var regex: SavedRegex
-    @FocusState private var isPatternFocused: Bool
+    @State private var patternFocusRequest = 0
 
     var body: some View {
         // Replace and Filter need every match to be correct; only the match list is capped.
@@ -17,7 +17,12 @@ struct RegexDetailView: View {
 
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
-                PatternField(pattern: $regex.pattern, evaluation: evaluation, isFocused: $isPatternFocused)
+                PatternField(
+                    pattern: $regex.pattern,
+                    allowsExtendedSyntax: regex.options.allowsExtendedSyntax,
+                    evaluation: evaluation,
+                    focusRequest: patternFocusRequest
+                )
                 RegexOptionsBar(options: $regex.options)
             }
 
@@ -40,16 +45,17 @@ struct RegexDetailView: View {
         .focusedSceneValue(\.editorActions, EditorActions(
             mode: regex.mode,
             setMode: { regex.mode = $0 },
-            focusPattern: { isPatternFocused = true }
+            focusPattern: { patternFocusRequest += 1 }
         ))
     }
 }
 
-/// The pattern text field, with an inline message when the pattern doesn't compile.
+/// The pattern field, coloured by syntax, with an inline message when the pattern doesn't compile.
 private struct PatternField: View {
     @Binding var pattern: String
+    let allowsExtendedSyntax: Bool
     let evaluation: RegexEvaluation
-    var isFocused: FocusState<Bool>.Binding
+    let focusRequest: Int
 
     private var errorMessage: String? {
         if case .invalidPattern(let message) = evaluation { message } else { nil }
@@ -59,12 +65,11 @@ private struct PatternField: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel("Pattern")
             HStack(spacing: 6) {
-                TextField("Pattern", text: $pattern, prompt: Text("Type a regular expression"))
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 14, design: .monospaced))
-                    .autocorrectionDisabled()
-                    .focused(isFocused)
+                PatternTextField(
+                    pattern: $pattern,
+                    allowsExtendedSyntax: allowsExtendedSyntax,
+                    focusRequest: focusRequest
+                )
                     .overlay {
                         if errorMessage != nil {
                             RoundedRectangle(cornerRadius: 6).stroke(.red, lineWidth: 1.5)
