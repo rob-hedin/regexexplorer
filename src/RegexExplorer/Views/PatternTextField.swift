@@ -61,6 +61,11 @@ struct PatternTextField: NSViewRepresentable {
 
         func controlTextDidBeginEditing(_ notification: Notification) {
             if let editor = notification.userInfo?["NSFieldEditor"] as? NSTextView {
+                // A pattern needs exactly the characters typed, as the SwiftUI field's autocorrectionDisabled() gave.
+                editor.isAutomaticSpellingCorrectionEnabled = false
+                editor.isAutomaticTextReplacementEnabled = false
+                editor.isAutomaticQuoteSubstitutionEnabled = false
+                editor.isAutomaticDashSubstitutionEnabled = false
                 PatternTextField.color(editor, allowsExtendedSyntax: parent.allowsExtendedSyntax)
             }
         }
