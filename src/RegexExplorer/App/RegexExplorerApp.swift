@@ -23,6 +23,7 @@ struct RegexExplorerApp: App {
         }
         .defaultSize(width: 1200, height: 780)
         .commands {
+            SidebarCommands()
             RegexCommands()
         }
 

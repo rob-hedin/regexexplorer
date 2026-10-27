@@ -44,8 +44,9 @@ from the command line:
 xcodebuild -scheme RegexExplorer -destination 'platform=macOS' test
 ```
 
-To sign, choose your team under Signing & Capabilities for the RegexExplorer
-target. [Releasing](docs/releasing.md) covers archiving and notarizing.
+The project signs automatically with team SZMB83JQ7N. To build with a
+different team, change it under Signing & Capabilities. [Releasing](docs/releasing.md)
+covers archiving and notarizing.
 
 ## Layout
 

@@ -5,8 +5,9 @@ Mac App Store or as a notarized download.
 
 ## Before the first release
 
-1. In Xcode, select the **RegexExplorer** target › Signing & Capabilities and
-   choose your team. Signing is automatic.
+1. The project signs automatically with team `SZMB83JQ7N`. Your Mac needs a
+   Developer ID Application certificate for that team (Xcode › Settings ›
+   Accounts › Manage Certificates) to export a notarized download.
 2. Check the bundle identifier and the version (`MARKETING_VERSION`) and build
    number (`CURRENT_PROJECT_VERSION`) in the target's build settings.
 
