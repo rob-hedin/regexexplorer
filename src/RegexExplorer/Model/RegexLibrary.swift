@@ -44,6 +44,10 @@ final class RegexLibrary {
         persist()
     }
 
+    func dismissError() {
+        lastError = nil
+    }
+
     /// Returns `base`, or `base` followed by the lowest number that isn't already in use.
     func uniqueName(startingWith base: String) -> String {
         let existing = Set(regexes.map(\.name))

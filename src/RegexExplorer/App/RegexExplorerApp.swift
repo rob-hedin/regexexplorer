@@ -9,5 +9,6 @@ struct RegexExplorerApp: App {
             ContentView()
                 .environment(library)
         }
+        .defaultSize(width: 1200, height: 780)
     }
 }
