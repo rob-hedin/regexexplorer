@@ -67,3 +67,6 @@ fastlane/test_output
 .obsidian/workspace-mobile.json
 .obsidian/plugins/
 .obsidian/cache/
+
+# Xcode build output when built with -derivedDataPath
+DerivedData/
