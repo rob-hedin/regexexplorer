@@ -17,6 +17,10 @@ struct ContentView: View {
         return (try? RegexEvaluator.makeRegex(pattern: regex.pattern, options: regex.options)) != nil
     }
 
+    private var showSwiftCodeAction: (() -> Void)? {
+        canShowSwiftCode ? { isShowingSwiftCode = true } : nil
+    }
+
     var body: some View {
         NavigationSplitView {
             RegexSidebar(selection: $selection)
@@ -50,6 +54,7 @@ struct ContentView: View {
                 .help("Open the regex cheat sheet")
             }
         }
+        .focusedSceneValue(\.showSwiftCode, showSwiftCodeAction)
         .sheet(isPresented: $isShowingSwiftCode) {
             if let selectedRegex {
                 SwiftCodeView(regex: selectedRegex)

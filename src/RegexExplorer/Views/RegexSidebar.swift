@@ -33,6 +33,11 @@ struct RegexSidebar: View {
             }
         }
         .searchable(text: $searchText, placement: .sidebar)
+        .focusedSceneValue(\.sidebarActions, SidebarActions(
+            add: addRegex,
+            renameSelected: selection.map { id in { renamingID = id } },
+            deleteSelected: selection.map { id in { delete([id]) } }
+        ))
         .onDeleteCommand {
             if let selection { delete([selection]) }
         }

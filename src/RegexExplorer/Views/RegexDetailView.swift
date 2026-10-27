@@ -3,6 +3,7 @@ import SwiftUI
 /// Edits one saved regex: its pattern, options and test text, with live, read-only results.
 struct RegexDetailView: View {
     @Binding var regex: SavedRegex
+    @FocusState private var isPatternFocused: Bool
 
     var body: some View {
         // Replace and Filter need every match to be correct; only the match list is capped.
@@ -15,7 +16,7 @@ struct RegexDetailView: View {
 
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
-                PatternField(pattern: $regex.pattern, evaluation: evaluation)
+                PatternField(pattern: $regex.pattern, evaluation: evaluation, isFocused: $isPatternFocused)
                 RegexOptionsBar(options: $regex.options)
             }
 
@@ -35,6 +36,11 @@ struct RegexDetailView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
+        .focusedSceneValue(\.editorActions, EditorActions(
+            mode: regex.mode,
+            setMode: { regex.mode = $0 },
+            focusPattern: { isPatternFocused = true }
+        ))
     }
 }
 
@@ -42,6 +48,7 @@ struct RegexDetailView: View {
 private struct PatternField: View {
     @Binding var pattern: String
     let evaluation: RegexEvaluation
+    var isFocused: FocusState<Bool>.Binding
 
     private var errorMessage: String? {
         if case .invalidPattern(let message) = evaluation { message } else { nil }
@@ -55,6 +62,7 @@ private struct PatternField: View {
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 14, design: .monospaced))
                 .autocorrectionDisabled()
+                .focused(isFocused)
                 .overlay {
                     if errorMessage != nil {
                         RoundedRectangle(cornerRadius: 6).stroke(.red, lineWidth: 1.5)
