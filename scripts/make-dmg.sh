@@ -30,7 +30,7 @@ mkdir -p "$staging"
 cp -R "$app" "$staging/"
 ln -s /Applications "$staging/Applications"
 
-hdiutil create -volname "RegEx Explorer" -srcfolder "$staging" -fs APFS -format ULFO "$dmg"
+diskutil image create from --volumeName "RegEx Explorer" --format ULFO "$staging" "$dmg"
 rm -rf "$staging"
 
 codesign --sign "$identity" --timestamp "$dmg"
