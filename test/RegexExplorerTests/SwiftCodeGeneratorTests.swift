@@ -19,13 +19,13 @@ struct SwiftCodeGeneratorTests {
     }
 
     @Test(arguments: [
-        ("abc", "/abc/"),
+        ("abc", "#/abc/#"),
         ("a/b", "#/a/b/#"),
         (" a", "#/ a/#"),
         ("*a", "#/*a/#"),
         ("a/#b", "##/a/#b/##"),
     ])
-    func literalUsesTheSimplestDelimiters(pattern: String, literal: String) {
+    func literalUsesTheFewestHashes(pattern: String, literal: String) {
         #expect(SwiftCodeGenerator.regexLiteral(for: pattern) == literal)
     }
 
@@ -45,15 +45,15 @@ struct SwiftCodeGeneratorTests {
             options: RegexOptions(ignoresCase: true)
         )
         #expect(SwiftCodeGenerator.code(for: regex) == #"""
-            let regex = /(?<name>[a-z]+)\.(?<tld>[a-z]+)/
+            let regex = #/(?<name>[a-z]+)\.(?<tld>[a-z]+)/#
                 .ignoresCase()
 
             let text = "swift.org"
 
             for match in text.matches(of: regex) {
                 print(match.output.0) // The whole match
-                print(match.output.name) // Group 1
-                print(match.output.tld) // Group 2
+                print(match.output.name as Substring? ?? "") // Group 1
+                print(match.output.tld as Substring? ?? "") // Group 2
             }
 
             """#)
@@ -71,7 +71,7 @@ struct SwiftCodeGeneratorTests {
 
     @Test func replaceModeWithoutGroupsUsesAPlainString() {
         let regex = SavedRegex(name: "Digits", pattern: #"\d"#, mode: .replace, replacement: "#")
-        #expect(SwiftCodeGenerator.code(for: regex).contains(#"let result = text.replacing(regex, with: "#")"#))
+        #expect(SwiftCodeGenerator.code(for: regex).contains(##"let result = text.replacing(regex, with: "#")"##))
     }
 
     @Test func filterModeCode() {

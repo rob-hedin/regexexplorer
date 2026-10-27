@@ -96,13 +96,8 @@ enum SwiftCodeGenerator {
         // Literals are a single line here, and Swift checks them when the code compiles.
         guard !source.isEmpty, !source.contains(where: \.isNewline) else { return nil }
 
-        // A bare /…/ literal can't contain "/", can't start or end with whitespace,
-        // and can't start with "*" (which would read as a comment).
-        let needsDelimiters = source.contains("/")
-            || source.first!.isWhitespace || source.last!.isWhitespace
-            || source.hasPrefix("*")
-        guard needsDelimiters else { return "/\(source)/" }
-
+        // Bare /…/ literals only compile in the Swift 6 language mode (or with
+        // -enable-bare-slash-regex) and can't hold every pattern, so always use #/…/#.
         var hashes = "#"
         while source.contains("/" + hashes) {
             hashes += "#"
@@ -150,8 +145,11 @@ enum SwiftCodeGenerator {
                 lines.append("    print(match.output)")
             } else {
                 lines.append("    print(match.output.0) // The whole match")
+                // A group is Substring? when it may not take part, such as (b)?, and Substring
+                // otherwise; "as Substring?" reads either without a warning.
                 for (offset, name) in groups.enumerated() {
-                    lines.append("    print(match.output.\(name ?? String(offset + 1))) // Group \(offset + 1)")
+                    let element = "match.output.\(name ?? String(offset + 1))"
+                    lines.append("    print(\(element) as Substring? ?? \"\") // Group \(offset + 1)")
                 }
             }
         } else {
