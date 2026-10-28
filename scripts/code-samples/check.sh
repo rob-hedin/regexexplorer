@@ -6,7 +6,7 @@
 set -u
 samples=$(cd "${1:-build/code-samples}" && pwd) || exit 1
 shift || true
-languages=${*:-"swift6 swift5 csharp cpp go java javascript typescript kotlin perl php python r ruby rust"}
+languages=${*:-"swift6 swift5 csharp cpp go java javascript typescript kotlin kotlin-jvm perl php python r ruby rust"}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
@@ -30,6 +30,10 @@ run() {
                 tsc --noEmit --strict --target es2022 --lib es2022,dom "$work/check.ts" >"$work/err" 2>&1 &&
                 node "$dir/javascript.js" ;;
         kotlin) kotlinc-native "$dir/kotlin.kt" -o "$work/kotlin" >/dev/null 2>"$work/err" && "$work/kotlin.kexe" ;;
+        # The same code on the JVM, whose regex engine differs from Kotlin/Native's.
+        kotlin-jvm)
+            kotlinc "$dir/kotlin.kt" -include-runtime -d "$work/kotlin.jar" 2>"$work/err" &&
+                java -Dstdout.encoding=UTF-8 -jar "$work/kotlin.jar" ;;
         perl) perl "$dir/perl.pl" 2>"$work/err" ;;
         php) php "$dir/php.php" 2>"$work/err" ;;
         python) python3 "$dir/python.py" 2>"$work/err" ;;
@@ -46,7 +50,7 @@ run() {
 tool_for() {
     case $1 in
         swift6 | swift5) echo swiftc ;; csharp) echo dotnet ;; cpp) echo g++ ;; go) echo go ;;
-        java) echo java ;; javascript) echo node ;; typescript) echo tsc ;; kotlin) echo kotlinc-native ;;
+        java) echo java ;; javascript) echo node ;; typescript) echo tsc ;; kotlin) echo kotlinc-native ;; kotlin-jvm) echo kotlinc ;;
         perl) echo perl ;; php) echo php ;; python) echo python3 ;; r) echo Rscript ;;
         ruby) echo ruby ;; rust) echo cargo ;;
     esac
