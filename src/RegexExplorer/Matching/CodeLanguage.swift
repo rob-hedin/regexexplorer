@@ -1,5 +1,4 @@
 // Copyright © 2026 Robert Hedin
-// All Rights Reserved.
 
 /// A language the Code sheet can write code in.
 ///

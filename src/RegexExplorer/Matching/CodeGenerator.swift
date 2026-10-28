@@ -1,5 +1,4 @@
 // Copyright © 2026 Robert Hedin
-// All Rights Reserved.
 
 /// Writes code in any ``CodeLanguage`` that does what the editor shows for a saved regex.
 ///

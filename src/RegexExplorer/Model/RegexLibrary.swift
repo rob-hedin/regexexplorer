@@ -1,5 +1,4 @@
 // Copyright © 2026 Robert Hedin
-// All Rights Reserved.
 
 import Foundation
 import Observation

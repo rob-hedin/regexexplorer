@@ -1,6 +1,5 @@
 #!/bin/sh
 # Copyright © 2026 Robert Hedin
-# All Rights Reserved.
 #
 # Builds main.swift with the app's model and code generators, and writes the code each
 # language generates for the samples into build/code-samples (or the folder you give).
