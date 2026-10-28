@@ -15,3 +15,5 @@
    first launch.
 6. **Ready to publish:** App icon, keyboard shortcuts, signing and notarization
    settings, README.
+7. **Code in other languages** (added): the Swift Code button becomes Code, and
+   its sheet has a menu of 14 languages, with Swift 6 as the default.

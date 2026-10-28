@@ -15,8 +15,9 @@ Results show in one of three modes:
 
 Options for each regex cover ignoring case, `^` and `$` at line endings, `.`
 matching newlines, ignoring whitespace, and simple word boundaries. A cheat sheet
-window lists the syntax, and the **Swift Code** button writes Swift that does what
-the editor shows, for the Swift 6 or Swift 5 language mode.
+window lists the syntax, and the **Code** button writes code that does what the
+editor shows, in C#, C++, Go, Java, JavaScript / TypeScript, Kotlin, Perl,
+PHP, Python, R, Ruby, Rust, Swift 5 or Swift 6.
 
 On first launch the library starts with a few common regexes to explore.
 
@@ -29,7 +30,7 @@ On first launch the library starts with a few common regexes to explore.
 | Delete | Delete the selected regex (in the list) |
 | ⌘L | Edit the pattern |
 | ⌘1 / ⌘2 / ⌘3 | Match / Replace / Filter |
-| ⇧⌘C | Show Swift code |
+| ⇧⌘C | Show code |
 | ⌥⌘/ | Open the cheat sheet |
 
 ## Requirements
@@ -55,7 +56,7 @@ covers archiving and notarizing.
 - `src/RegexExplorer/`: the app (SwiftUI, Swift Regex)
   - `App/`: the app entry point and menu commands
   - `Model/`: saved regexes, their options, the library, the starters and the cheat sheet
-  - `Matching/`: compiling patterns, finding matches, replacing, filtering and writing Swift code
+  - `Matching/`: compiling patterns, finding matches, replacing, filtering and writing code in each language
   - `Storage/`: reading and writing the JSON file
   - `Views/`: SwiftUI views
 - `test/RegexExplorerTests/`: unit tests (Swift Testing)

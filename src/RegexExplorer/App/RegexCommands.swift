@@ -15,24 +15,24 @@ struct EditorActions {
     var focusPattern: () -> Void
 }
 
-/// Shows the Swift code sheet for the focused window. Wrapped in a struct because
+/// Shows the code sheet for the focused window. Wrapped in a struct because
 /// storing a bare closure in a focused value makes SwiftUI warn that it can't compare it.
-struct SwiftCodeAction {
+struct CodeAction {
     var show: () -> Void
 }
 
 extension FocusedValues {
     @Entry var sidebarActions: SidebarActions?
     @Entry var editorActions: EditorActions?
-    /// Shows the Swift code sheet; `nil` when there's no valid pattern to write code for.
-    @Entry var showSwiftCode: SwiftCodeAction?
+    /// Shows the code sheet; `nil` when there's no valid pattern to write code for.
+    @Entry var showCode: CodeAction?
 }
 
 /// The app's menu commands and keyboard shortcuts.
 struct RegexCommands: Commands {
     @FocusedValue(\.sidebarActions) private var sidebar
     @FocusedValue(\.editorActions) private var editor
-    @FocusedValue(\.showSwiftCode) private var showSwiftCode
+    @FocusedValue(\.showCode) private var showCode
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
@@ -62,9 +62,9 @@ struct RegexCommands: Commands {
 
             Divider()
 
-            Button("Show Swift Code") { showSwiftCode?.show() }
+            Button("Show Code") { showCode?.show() }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
-                .disabled(showSwiftCode == nil)
+                .disabled(showCode == nil)
         }
 
         CommandGroup(before: .help) {

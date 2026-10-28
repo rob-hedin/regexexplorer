@@ -1,18 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// A sheet showing Swift code that does what the editor shows for a regex.
-struct SwiftCodeView: View {
+/// A sheet showing code, in a language you choose, that does what the editor shows for a regex.
+struct CodeView: View {
     let regex: SavedRegex
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("swiftCodeLanguageMode") private var languageMode = SwiftLanguageMode.swift6
+    @AppStorage("codeLanguage") private var language = CodeLanguage.default
 
     var body: some View {
-        let code = SwiftCodeGenerator.code(for: regex, languageMode: languageMode)
+        let code = CodeGenerator.code(for: regex, language: language)
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Swift Code for \(regex.name)")
+                Text("Code for \(regex.name)")
                     .font(.headline)
                 Spacer()
                 Text(regex.mode.title)
@@ -27,27 +27,29 @@ struct SwiftCodeView: View {
                     .padding(12)
             }
             .background(.quinary, in: .rect(cornerRadius: 7))
-            .accessibilityLabel("Swift code")
+            .accessibilityLabel("\(language.title) code")
+            Text(language.requirements)
+                .font(.caption)
+                .foregroundStyle(.secondary)
             HStack {
                 Button("Copy", systemImage: "doc.on.doc") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(code, forType: .string)
                 }
-                Picker("Language mode", selection: $languageMode) {
-                    ForEach(SwiftLanguageMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
+                Picker("Language", selection: $language) {
+                    ForEach(CodeLanguage.allCases) { language in
+                        Text(language.title).tag(language)
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                .pickerStyle(.menu)
                 .fixedSize()
-                .help("Swift 6 uses /…/ regex literals; Swift 5 uses #/…/#, which works in both")
+                .help("The language to write the code in")
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
-        .frame(minWidth: 560, idealWidth: 640, minHeight: 360, idealHeight: 440)
+        .frame(minWidth: 600, idealWidth: 700, minHeight: 380, idealHeight: 480)
     }
 }
