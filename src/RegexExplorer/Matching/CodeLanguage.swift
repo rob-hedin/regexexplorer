@@ -49,7 +49,7 @@ enum CodeLanguage: String, CaseIterable, Identifiable, Sendable {
         case .java: "Java 16 or later, using java.util.regex."
         case .javascript: "Runs as JavaScript (ES2020+) or TypeScript."
         case .kotlin: "Kotlin, using kotlin.text.Regex rather than java.util.regex, so it also builds for Kotlin/Native."
-        case .perl: "Perl 5.10 or later."
+        case .perl: "Perl 5.14 or later."
         case .php: "PHP 8 or later, using the preg functions."
         case .python: "Python 3, using the re module."
         case .r: "R 4.1 or later, using base R with perl = TRUE."
