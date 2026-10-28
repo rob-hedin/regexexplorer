@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robhedin.com/schemas/regexexplorer-v20261028.json",
+  "title": "RegEx Explorer library",
+  "description": "The saved regexes of RegEx Explorer, as stored in regexes.json in the app's Application Support folder. See docs/storage-format.md.",
+  "type": "object",
+  "required": ["version", "regexes"],
+  "properties": {
+    "$schema": {
+      "description": "The URL of the schema the file follows.",
+      "type": "string",
+      "format": "uri"
+    },
+    "version": {
+      "description": "The file format version. Later releases use it to migrate older files.",
+      "type": "integer",
+      "const": 1
+    },
+    "regexes": {
+      "description": "The saved regexes, in the order the sidebar lists them.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/savedRegex" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "savedRegex": {
+      "description": "A named, reusable regular expression with its sample text and options. Only id and name are required; the app uses the default for any other missing field.",
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "description": "A UUID that identifies the regex.",
+          "type": "string",
+          "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+        },
+        "name": {
+          "description": "The name shown in the sidebar, such as \"Email Address\".",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "The regular expression, in Swift Regex syntax.",
+          "type": "string",
+          "default": ""
+        },
+        "sampleText": {
+          "description": "The text the pattern is tried against.",
+          "type": "string",
+          "default": ""
+        },
+        "options": { "$ref": "#/$defs/options" },
+        "mode": {
+          "description": "Which result the editor shows. The app reads an unknown mode as match.",
+          "enum": ["match", "replace", "filter"],
+          "default": "match"
+        },
+        "replacement": {
+          "description": "The Replace mode template: $0 is the whole match, $1 or ${1} a group, ${name} a named group, and $$ a dollar sign.",
+          "type": "string",
+          "default": ""
+        },
+        "invertsFilter": {
+          "description": "In Filter mode, keep the lines without a match instead of those with one.",
+          "type": "boolean",
+          "default": false
+        },
+        "createdAt": {
+          "description": "When the regex was created, as an ISO 8601 date and time.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "modifiedAt": {
+          "description": "When the regex was last changed, as an ISO 8601 date and time. Defaults to createdAt.",
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "options": {
+      "description": "Settings applied when the pattern is compiled. A missing option is off.",
+      "type": "object",
+      "properties": {
+        "ignoresCase": {
+          "description": "Letters match regardless of case.",
+          "type": "boolean",
+          "default": false
+        },
+        "anchorsMatchLineEndings": {
+          "description": "^ and $ match at the start and end of every line, not just the whole text.",
+          "type": "boolean",
+          "default": false
+        },
+        "dotMatchesNewlines": {
+          "description": ". also matches newline characters.",
+          "type": "boolean",
+          "default": false
+        },
+        "allowsExtendedSyntax": {
+          "description": "Whitespace in the pattern is ignored and # starts a comment.",
+          "type": "boolean",
+          "default": false
+        },
+        "usesSimpleWordBoundaries": {
+          "description": "\\b uses simple word-character transitions instead of Unicode word rules.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

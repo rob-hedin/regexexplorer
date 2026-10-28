@@ -39,6 +39,12 @@ final class RegexLibraryStoreTests {
         #expect(file.version == RegexLibraryStore.File.currentVersion)
     }
 
+    @Test func fileReferencesItsSchemaFirst() throws {
+        try store.save([])
+        let json = try String(contentsOf: store.fileURL, encoding: .utf8)
+        #expect(json.hasPrefix("{\n  \"$schema\" : \"https://robhedin.com/schemas/regexexplorer-v20261028.json\","))
+    }
+
     @Test func missingFieldsGetDefaults() throws {
         let json = #"{"version": 1, "regexes": [{"id": "6F9619FF-8B86-D011-B42D-00C04FC964FF", "name": "Old"}]}"#
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
