@@ -4,7 +4,7 @@
 #
 # Usage: scripts/code-samples/check.sh [samples folder] [language ...]
 set -u
-samples=$(cd "${1:-build/code-samples}" && pwd)
+samples=$(cd "${1:-build/code-samples}" && pwd) || exit 1
 shift || true
 languages=${*:-"swift6 swift5 csharp cpp go java javascript typescript kotlin perl php python r ruby rust"}
 work=$(mktemp -d)

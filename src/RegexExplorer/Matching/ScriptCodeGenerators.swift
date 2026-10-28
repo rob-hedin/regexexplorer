@@ -360,13 +360,23 @@ enum RCodeGenerator {
         if options.anchorsMatchLineEndings { flags += "m" }
         if options.dotMatchesNewlines { flags += "s" }
         if options.allowsExtendedSyntax { flags += "x" }
-        let pattern = (flags.isEmpty ? "" : "(?\(flags))") + request.pattern
 
         var unsupported: [String] = []
-        let segments = request.numberedReplacementSegments
+        var segments = request.numberedReplacementSegments
+        var body = request.pattern
+        // gsub has no reference to the whole match, so the pattern goes in a group of its own
+        // and every other group moves up by one.
+        if request.mode == .replace, segments.contains(.group(0)) {
+            if request.features.contains(.backreference) {
+                unsupported.append("replacing with the whole match in a pattern with backreferences")
+            }
+            body = "(" + body + (options.allowsExtendedSyntax ? "\n)" : ")")
+            segments = segments.map { if case .group(let number) = $0 { .group(number + 1) } else { $0 } }
+        }
         if request.mode == .replace, segments.contains(where: { if case .group(let number) = $0 { number > 9 } else { false } }) {
             unsupported.append("replacing with groups after \\9")
         }
+        let pattern = (flags.isEmpty ? "" : "(?\(flags))") + body
 
         var lines = request.notes(engine: "R", unsupported: unsupported, comment: "#")
         lines.append("pattern <- \(rawLiteral(pattern))")

@@ -359,6 +359,13 @@ enum CppCodeGenerator {
         if request.mode == .filter { includes.insert("<sstream>", at: 2) }
 
         var lines = request.notes(engine: "std::regex", unsupported: unsupported, comment: "//")
+        if !(request.pattern + request.sampleText).allSatisfy(\.isASCII) {
+            lines += [
+                "// Note: std::regex reads UTF-8 text a byte at a time, so . and character classes",
+                "// don't match characters outside ASCII the way they do in the editor.",
+                "",
+            ]
+        }
         lines += includes.map { "#include \($0)" }
         lines += [
             "",

@@ -85,6 +85,19 @@ struct CodeGeneratorTests {
         #expect(generated.contains(#"R"((a[\s\S])\1)""#))
     }
 
+    @Test func cppWarnsAboutTextOutsideASCII() {
+        #expect(!code(.cpp, regex("w.rld")).contains("Note:"))
+        #expect(code(.cpp, regex("wörld")).contains("Note: std::regex reads UTF-8 text a byte at a time"))
+    }
+
+    @Test func rWrapsThePatternToReplaceWithTheWholeMatch() {
+        let generated = code(.r, regex(#"(\w)\d"#, mode: .replace, replacement: "<$0|$1>"))
+        #expect(generated.contains(#"pattern <- r"(((\w)\d))""#))
+        #expect(generated.contains(#"gsub(pattern, "<\\1|\\2>", text, perl = TRUE)"#))
+        #expect(!generated.contains("Note:"))
+        #expect(code(.r, regex(#"(a)\1"#, mode: .replace, replacement: "$0")).contains("Note:"))
+    }
+
     @Test func extendedSyntaxIsStrippedWhereUnsupported() {
         let saved = regex("a b # note\n[ ]c", options: RegexOptions(allowsExtendedSyntax: true))
         #expect(code(.javascript, saved).contains("const regex = /ab[ ]c/g;"))

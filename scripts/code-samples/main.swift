@@ -80,7 +80,14 @@ func fileName(for language: CodeLanguage) -> String {
 
 /// What the generated code should print, worked out the way the editor works it out.
 func expectedOutput(for regex: SavedRegex) throws -> String {
-    let compiled = try RegexEvaluator.makeRegex(pattern: regex.pattern, options: regex.options)
+    let compiled: Regex<AnyRegexOutput>
+    do {
+        compiled = try RegexEvaluator.makeRegex(pattern: regex.pattern, options: regex.options)
+    } catch {
+        // Swift's Regex can't compile some syntax (such as lookbehind) that the other
+        // languages can, so work out what they should print with ICU instead.
+        return try icuExpectedOutput(for: regex)
+    }
     guard case .matches(let matches, _) = RegexEvaluator.evaluate(
         pattern: regex.pattern, options: regex.options, in: regex.sampleText, matchLimit: .max
     ) else { throw CocoaError(.featureUnsupported) }
@@ -101,6 +108,26 @@ func expectedOutput(for regex: SavedRegex) throws -> String {
         let kept = lines.filter { $0.contains(compiled) != regex.invertsFilter }
         return kept.joined(separator: "\n") + "\n"
     }
+}
+
+/// What a match-mode sample should print, worked out with NSRegularExpression.
+func icuExpectedOutput(for regex: SavedRegex) throws -> String {
+    guard regex.mode == .match else { throw CocoaError(.featureUnsupported) }
+    var options: NSRegularExpression.Options = []
+    if regex.options.ignoresCase { options.insert(.caseInsensitive) }
+    if regex.options.anchorsMatchLineEndings { options.insert(.anchorsMatchLines) }
+    if regex.options.dotMatchesNewlines { options.insert(.dotMatchesLineSeparators) }
+    if regex.options.allowsExtendedSyntax { options.insert(.allowCommentsAndWhitespace) }
+    let compiled = try NSRegularExpression(pattern: regex.pattern, options: options)
+    let text = regex.sampleText as NSString
+    var lines: [String] = []
+    for match in compiled.matches(in: regex.sampleText, range: NSRange(location: 0, length: text.length)) {
+        for index in 0..<match.numberOfRanges {
+            let range = match.range(at: index)
+            lines.append(range.location == NSNotFound ? "" : text.substring(with: range))
+        }
+    }
+    return lines.map { $0 + "\n" }.joined()
 }
 
 let output = URL(filePath: CommandLine.arguments.dropFirst().first ?? "build/code-samples", directoryHint: .isDirectory)
