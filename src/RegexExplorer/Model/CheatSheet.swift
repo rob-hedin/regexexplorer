@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import Foundation
 
 /// One line of the cheat sheet: a piece of regex syntax and what it means.

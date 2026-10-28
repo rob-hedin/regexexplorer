@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 /// A language the Code sheet can write code in.
 ///
 /// The cases are in the order the menu lists them, which is alphabetical by title.

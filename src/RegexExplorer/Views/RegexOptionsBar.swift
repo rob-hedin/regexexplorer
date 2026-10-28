@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import SwiftUI
 
 /// A row of toggles for the optional settings on a regex.

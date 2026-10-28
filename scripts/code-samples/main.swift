@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import Foundation
 
 // Writes the code every language generates for a set of sample regexes, with the output

@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import SwiftUI
 
 /// The main window: saved regexes on the left, the selected one's editor on the right.

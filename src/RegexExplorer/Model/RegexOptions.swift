@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import Foundation
 
 /// Optional settings applied when a saved regex is compiled.

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright © 2026 Robert Hedin
+#
 # Runs the code in each sample folder that run.sh wrote, in every language whose
 # tools are installed, and compares what it prints with the sample's expected.txt.
 #

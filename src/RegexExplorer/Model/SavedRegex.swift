@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import Foundation
 
 /// A named, reusable regular expression, together with the sample text it is

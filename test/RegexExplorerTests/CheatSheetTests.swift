@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import Testing
 @testable import RegexExplorer
 

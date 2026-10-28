@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import Foundation
 
 /// Finds a pattern's capture groups from its source text, without matching anything.

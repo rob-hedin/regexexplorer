@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright © 2026 Robert Hedin
+#
 # Builds a signed, notarized "drag to Applications" disk image from an exported,
 # notarized RegexExplorer.app.
 #

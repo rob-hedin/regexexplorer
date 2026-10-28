@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import SwiftUI
 
 /// The list of saved regexes, with search, add, rename and delete.

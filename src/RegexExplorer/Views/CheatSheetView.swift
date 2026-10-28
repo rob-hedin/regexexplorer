@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 import SwiftUI
 
 /// The contents of the cheat sheet window: regex syntax in searchable sections.

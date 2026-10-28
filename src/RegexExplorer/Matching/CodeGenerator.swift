@@ -1,3 +1,5 @@
+// Copyright © 2026 Robert Hedin
+
 /// Writes code in any ``CodeLanguage`` that does what the editor shows for a saved regex.
 ///
 /// Every language's code prints the same thing: in Match mode each match and then each of
