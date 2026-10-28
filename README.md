@@ -16,7 +16,7 @@ Results show in one of three modes:
 Options for each regex cover ignoring case, `^` and `$` at line endings, `.`
 matching newlines, ignoring whitespace, and simple word boundaries. A cheat sheet
 window lists the syntax, and the **Code** button writes code that does what the
-editor shows, in C#, C++, Go, Java, JavaScript / TypeScript, Kotlin/Native, Perl,
+editor shows, in C#, C++, Go, Java, JavaScript / TypeScript, Kotlin, Perl,
 PHP, Python, R, Ruby, Rust, Swift 5 or Swift 6.
 
 On first launch the library starts with a few common regexes to explore.
