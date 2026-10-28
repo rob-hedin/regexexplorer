@@ -23,11 +23,11 @@ run() {
             cp "$dir/csharp.cs" "$work/cs/Program.cs" && dotnet run --project "$work/cs" 2>"$work/err" ;;
         cpp) g++ -std=c++17 -o "$work/cpp" "$dir/cpp.cpp" 2>"$work/err" && "$work/cpp" ;;
         go) go run "$dir/go.go" 2>"$work/err" ;;
-        java) java "$dir/Main.java" 2>"$work/err" ;;
+        java) java -Dstdout.encoding=UTF-8 "$dir/Main.java" 2>"$work/err" ;;
         javascript) node "$dir/javascript.js" 2>"$work/err" ;;
         typescript)
             cp "$dir/javascript.js" "$work/check.ts" &&
-                tsc --noEmit --strict --target es2022 --lib es2022 --types node "$work/check.ts" >"$work/err" 2>&1 &&
+                tsc --noEmit --strict --target es2022 --lib es2022,dom "$work/check.ts" >"$work/err" 2>&1 &&
                 node "$dir/javascript.js" ;;
         kotlin) kotlinc-native "$dir/kotlin.kt" -o "$work/kotlin" >/dev/null 2>"$work/err" && "$work/kotlin.kexe" ;;
         perl) perl "$dir/perl.pl" 2>"$work/err" ;;
