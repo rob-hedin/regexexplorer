@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import Foundation
 
 /// Reads and writes the saved regexes as a single JSON file.

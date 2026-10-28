@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import Foundation
 
 /// Common regexes the library starts with on first launch, so there is something to explore.

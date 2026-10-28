@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import SwiftUI
 
 /// A row of toggles for the optional settings on a regex.

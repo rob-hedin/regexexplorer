@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import Foundation
 
 /// One capture group within a match. Group 0 (the whole match) is not included.

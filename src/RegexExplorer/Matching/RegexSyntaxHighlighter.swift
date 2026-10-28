@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 /// The parts of a pattern that the pattern field colours.
 enum RegexSyntaxKind: Sendable, Equatable {
     /// An escape such as `\d`, `\.` or `\p{L}`, or a backreference such as `\1`.

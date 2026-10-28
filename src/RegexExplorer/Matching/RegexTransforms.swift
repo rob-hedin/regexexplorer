@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import Foundation
 
 /// A parsed replacement template such as `<${name}>`.

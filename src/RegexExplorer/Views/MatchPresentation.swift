@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import SwiftUI
 
 /// A capture group shown as a column in the match table.

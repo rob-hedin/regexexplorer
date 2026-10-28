@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 import SwiftUI
 
 /// What the sidebar of the focused window can do, for the menu commands.

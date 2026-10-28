@@ -1,3 +1,6 @@
+// Copyright © 2026 Robert Hedin
+// All Rights Reserved.
+
 // Code generators for the compiled languages. Each one's output prints what the editor
 // shows; see ``CodeGenerator``.
 
