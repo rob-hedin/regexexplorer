@@ -4,12 +4,23 @@ import Foundation
 
 /// Reads and writes the saved regexes as a single JSON file.
 struct RegexLibraryStore: Sendable {
-    /// The on-disk format. `version` lets later releases migrate older files.
+    /// The on-disk format. `version` lets later releases migrate older files, and
+    /// `$schema` names the JSON schema that describes it (see docs/storage-format.md).
     struct File: Codable {
         static let currentVersion = 1
+        /// Where the schema for the current format is published. Its copy is in schemas/.
+        static let schemaURL = "https://robhedin.com/schemas/regexexplorer-v20261028.json"
 
+        /// `nil` in files written before the schema existed.
+        var schema: String?
         var version: Int
         var regexes: [SavedRegex]
+
+        enum CodingKeys: String, CodingKey {
+            case schema = "$schema"
+            case version
+            case regexes
+        }
     }
 
     let fileURL: URL
@@ -46,7 +57,7 @@ struct RegexLibraryStore: Sendable {
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        let data = try Self.encoder.encode(File(version: File.currentVersion, regexes: regexes))
+        let data = try Self.encoder.encode(File(schema: File.schemaURL, version: File.currentVersion, regexes: regexes))
         try data.write(to: fileURL, options: .atomic)
     }
 
@@ -63,7 +74,7 @@ struct RegexLibraryStore: Sendable {
 
     private static var encoder: JSONEncoder {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }

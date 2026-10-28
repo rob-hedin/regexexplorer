@@ -61,6 +61,9 @@ covers archiving and notarizing.
   - `Views/`: SwiftUI views
 - `test/RegexExplorerTests/`: unit tests (Swift Testing)
 - `docs/`: project notes, including the [plan](docs/plan.md)
+- `schemas/`: JSON schemas for the saved-regex file, one per format change
 
 Saved regexes live in `regexes.json` in the app's Application Support folder
 (inside its sandbox container). Unit tests never touch that file.
+[Storage format](docs/storage-format.md) describes the file and its JSON schema,
+which is in `schemas/`.
