@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "RegEx Explorer"
+          }
+        }
+      }
+    },
     "CFBundleName" : {
       "comment" : "Bundle name shown in the app menu and the About window",
       "extractionState" : "manual",
@@ -9,6 +21,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RegEx Explorer"
+          }
+        }
+      }
+    },
+    "NSHumanReadableCopyright" : {
+      "comment" : "Copyright (human-readable)",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copyright © 2026 Robert Hedin"
           }
         }
       }
