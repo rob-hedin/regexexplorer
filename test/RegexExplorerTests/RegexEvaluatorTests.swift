@@ -1,5 +1,6 @@
 // Copyright © 2026 Robert Hedin
 
+import Foundation
 import Testing
 @testable import RegexExplorer
 
@@ -111,5 +112,27 @@ struct RegexEvaluatorTests {
         try? await Task.sleep(for: .milliseconds(50))
         task.cancel()
         #expect(await task.value == nil)
+    }
+
+    @Test func busyWorkersQueueNewWorkAndSkipCancelledRequests() async {
+        let workers = MatchWorkers(threadLimit: 1)
+        let slow = Task {
+            await workers.run {
+                Thread.sleep(forTimeInterval: 0.3)
+                return .noPattern
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+        // The only thread is busy, so these wait in the queue.
+        let skipped = Task { await workers.run { .invalidPattern("should not run") } }
+        let queued = Task { await workers.run { .matches([], truncated: false) } }
+        try? await Task.sleep(for: .milliseconds(50))
+        skipped.cancel()
+        slow.cancel()
+
+        #expect(await slow.value == nil)
+        #expect(await skipped.value == nil)
+        // It runs once the slow work finishes, on the same thread.
+        #expect(await queued.value == .matches([], truncated: false))
     }
 }

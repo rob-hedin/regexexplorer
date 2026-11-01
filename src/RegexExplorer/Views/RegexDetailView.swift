@@ -22,6 +22,16 @@ struct RegexDetailView: View {
         )
     }
 
+    /// The evaluation to show results from. Match mode's capped result would give a wrong
+    /// Replace or Filter result, so after switching mode those wait for the full evaluation.
+    private var shownEvaluation: EvaluatedInput? {
+        guard let evaluated else { return nil }
+        if regex.mode != .match, case .matches(_, truncated: true) = evaluated.evaluation {
+            return nil
+        }
+        return evaluated
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
@@ -48,7 +58,7 @@ struct RegexDetailView: View {
 
             ResultsView(
                 regex: $regex,
-                evaluated: evaluated.map { (text: $0.input.text, evaluation: $0.evaluation) },
+                evaluated: shownEvaluation.map { (text: $0.input.text, evaluation: $0.evaluation) },
                 isSlow: isSlow
             )
         }
