@@ -70,6 +70,8 @@ enum CaptureGroupScanner {
                 } else if rest.first != "*" {
                     groups.append(nil)
                 }
+                // Step over standalone flags, so their ")" doesn't close the enclosing group.
+                if let flags, flags.endsGroup { index = flags.end }
             default:
                 break
             }
@@ -80,8 +82,9 @@ enum CaptureGroupScanner {
 
     /// For inline flags such as `(?x)`, `(?i-x:` or `(?^:` opening at `open`: whether they turn
     /// extended syntax on or off (`nil` if they leave it alone), and whether they end at `)`
-    /// rather than starting a group. `nil` when the parenthesis doesn't start inline flags.
-    private static func inlineFlags(in characters: [Character], after open: Int) -> (extended: Bool?, endsGroup: Bool)? {
+    /// rather than starting a group, and where the `)` or `:` is. `nil` when the parenthesis
+    /// doesn't start inline flags.
+    private static func inlineFlags(in characters: [Character], after open: Int) -> (extended: Bool?, endsGroup: Bool, end: Int)? {
         guard open + 1 < characters.count, characters[open + 1] == "?" else { return nil }
         var extended: Bool?
         var turningOff = false
@@ -91,7 +94,7 @@ enum CaptureGroupScanner {
             case ")", ":":
                 // "(?:" alone is a plain non-capturing group.
                 guard index > open + 2 else { return nil }
-                return (extended, characters[index] == ")")
+                return (extended, characters[index] == ")", index)
             case "^": extended = false
             case "-": turningOff = true
             case "x": extended = !turningOff

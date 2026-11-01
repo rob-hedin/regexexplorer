@@ -108,6 +108,8 @@ struct SwiftCodeGeneratorTests {
         #expect(CaptureGroupScanner.groups(in: "(?x)a # (fake)\n(b)") == [nil])
         #expect(CaptureGroupScanner.groups(in: "(?x:a # (fake)\n)(b) # (c)") == [nil, nil])
         #expect(CaptureGroupScanner.groups(in: "(?-x:# (a))", allowsExtendedSyntax: true) == [nil])
+        // Standalone flags last until the end of the group they're in.
+        #expect(CaptureGroupScanner.groups(in: "(?x:((?-x)#(a)))") == [nil, nil])
         // Quoted text holds neither flags nor groups.
         #expect(CaptureGroupScanner.groups(in: #"\Q(?x)\E#(a)"#) == [nil])
         #expect(CaptureGroupScanner.groups(in: #"\Q(a)"#).isEmpty)
