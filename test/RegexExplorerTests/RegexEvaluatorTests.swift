@@ -167,6 +167,8 @@ struct RegexEvaluatorTests {
         // ^ matches at the start of every line, without the line-anchors option.
         #expect(matches.map { String(text[$0.range]) } == ["b"])
         #expect(matches.first.map { text.distance(from: text.startIndex, to: $0.range.lowerBound) } == 2)
+        // A final newline doesn't add an empty line to match.
+        #expect(RegexEvaluator.evaluate(pattern: "^$", options: RegexOptions(), in: "a\n", eachLine: true) == .matches([], truncated: false))
         // No match runs past a line break.
         #expect(RegexEvaluator.evaluate(pattern: #"a\nb"#, options: RegexOptions(), in: text, eachLine: true) == .matches([], truncated: false))
     }

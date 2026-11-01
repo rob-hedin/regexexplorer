@@ -57,9 +57,13 @@ enum RegexEvaluator {
         var matches: [RegexMatch] = []
         let wanted = matchLimit == .max ? .max : matchLimit + 1
         // A substring is matched as if it were the whole text, and its ranges are the text's.
-        let subjects = eachLine
+        var subjects = eachLine
             ? text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
             : [text[...]]
+        // As in LineFilter, a final newline ends the last line rather than starting an empty one.
+        if eachLine, subjects.count > 1, subjects.last?.isEmpty == true {
+            subjects.removeLast()
+        }
         for subject in subjects where matches.count < wanted {
             _ = subject.replacing(regex, maxReplacements: wanted - matches.count) { match in
                 let groups = match.output.dropFirst().enumerated().map { offset, element in
