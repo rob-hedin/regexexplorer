@@ -12,6 +12,9 @@ final class RegexLibrary {
     private(set) var lastError: String?
 
     @ObservationIgnored private let store: RegexLibraryStore
+    /// Set when an unreadable file couldn't be moved aside. Saving would then replace it,
+    /// so changes stay in memory and the file is left for the user to recover.
+    @ObservationIgnored private var savingIsBlocked = false
 
     /// Loads the library from `store`. If nothing has been saved yet, the library starts
     /// with `starterRegexes` and saves them; an existing file, even an empty one, is never added to.
@@ -73,14 +76,20 @@ final class RegexLibrary {
             regexes = try store.load()
         } catch {
             // Keep the unreadable file for the user rather than overwriting it on the next save.
-            let moved = try? store.quarantineUnreadableFile()
-            lastError = "Your saved regexes couldn't be read"
-                + (moved.map { ", so the file was moved to \($0.lastPathComponent)" } ?? "")
-                + ". \(error.localizedDescription)"
+            if let moved = try? store.quarantineUnreadableFile() {
+                lastError = "Your saved regexes couldn't be read, so the file was moved to "
+                    + "\(moved.lastPathComponent). \(error.localizedDescription)"
+            } else {
+                savingIsBlocked = true
+                lastError = "Your saved regexes couldn't be read, and the file couldn't be moved aside, "
+                    + "so changes won't be saved. Move or fix \(store.fileURL.path(percentEncoded: false)), then reopen the app. "
+                    + error.localizedDescription
+            }
         }
     }
 
     private func persist() {
+        guard !savingIsBlocked else { return }
         do {
             try store.save(regexes)
         } catch {

@@ -6,13 +6,18 @@ import SwiftUI
 /// The lower half of the editor: a Match / Replace / Filter switch and the read-only result for that mode.
 struct ResultsView: View {
     @Binding var regex: SavedRegex
-    let evaluation: RegexEvaluation
+    /// The latest finished evaluation and the text it was made from, which can briefly lag
+    /// behind the test text while the next one runs. `nil` until the first one finishes.
+    let evaluated: (text: String, evaluation: RegexEvaluation)?
+    /// Whether the next evaluation is taking a noticeably long time.
+    let isSlow: Bool
 
-    private var text: String { regex.sampleText }
+    /// The match ranges belong to the evaluated text, so results are always built from it.
+    private var text: String { evaluated?.text ?? "" }
 
     /// The matches, when there is a valid pattern and some text to apply it to.
     private var found: (matches: [RegexMatch], truncated: Bool)? {
-        guard case .matches(let matches, let truncated) = evaluation, !text.isEmpty else { return nil }
+        guard case .matches(let matches, let truncated) = evaluated?.evaluation, !text.isEmpty else { return nil }
         return (matches, truncated)
     }
 
@@ -49,7 +54,14 @@ struct ResultsView: View {
             .labelsHidden()
             .fixedSize()
 
-            if let summary {
+            if isSlow {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Still matching…")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .help("This pattern is taking a long time, perhaps from heavy backtracking. Edit the pattern or the test text to try again.")
+            } else if let summary {
                 Text(summary)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -88,7 +100,8 @@ struct ResultsView: View {
     }
 
     private var placeholderMessage: LocalizedStringKey {
-        switch evaluation {
+        switch evaluated?.evaluation {
+        case nil: "Matching…"
         case .noPattern: "Type a pattern to see the result."
         case .invalidPattern: "Fix the pattern to see the result."
         case .matches: "Add some test text to see the result."

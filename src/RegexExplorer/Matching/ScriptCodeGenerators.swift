@@ -146,7 +146,7 @@ enum PerlCodeGenerator {
         if options.dotMatchesNewlines { flags += "s" }
         if options.allowsExtendedSyntax { flags += "x" }
 
-        let pattern = request.pattern.replacing("'", with: "\\'")
+        let pattern = quotedForSingleQuoteRegex(request.pattern)
         let text = StringLiteralStyle(
             extraEscapes: ["$": "\\$", "@": "\\@"],
             control: { "\\x{" + StringLiteralStyle.hex($0, width: 2) + "}" }
@@ -195,6 +195,26 @@ enum PerlCodeGenerator {
             lines.append("printf \"%s\\n\", join(\"\\n\", @kept);")
         }
         return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// The pattern's text for a `qr'…'` literal. Perl ends the literal at the first `'` that
+    /// follows an even number of backslashes, so only those quotes need a backslash; one that
+    /// is already escaped, as in `\'`, is left alone. A trailing odd backslash is doubled so it
+    /// can't escape the closing quote.
+    static func quotedForSingleQuoteRegex(_ pattern: String) -> String {
+        var result = ""
+        var backslashes = 0
+        for character in pattern {
+            if character == "'", backslashes.isMultiple(of: 2) {
+                result.append("\\")
+            }
+            result.append(character)
+            backslashes = character == "\\" ? backslashes + 1 : 0
+        }
+        if !backslashes.isMultiple(of: 2) {
+            result.append("\\")
+        }
+        return result
     }
 }
 

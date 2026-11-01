@@ -1,6 +1,7 @@
 // Copyright © 2026 Robert Hedin
 
 import Foundation
+import os
 
 /// One capture group within a match. Group 0 (the whole match) is not included.
 struct CaptureGroup: Hashable, Sendable {
@@ -56,6 +57,39 @@ enum RegexEvaluator {
             return RegexMatch(range: match.range, groups: groups)
         }
         return .matches(matches, truncated: found.count > matchLimit)
+    }
+
+    /// Evaluates on a thread of its own, so a pattern that backtracks for a long time can't
+    /// stall the caller. Returns `nil` as soon as the calling task is cancelled. Swift Regex
+    /// can't be interrupted, so the thread finishes the work and its result is dropped.
+    static func evaluateInBackground(
+        pattern: String,
+        options: RegexOptions,
+        in text: String,
+        matchLimit: Int = defaultMatchLimit
+    ) async -> RegexEvaluation? {
+        let pending = OSAllocatedUnfairLock<CheckedContinuation<RegexEvaluation?, Never>?>(initialState: nil)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                pending.withLock { $0 = continuation }
+                if Task.isCancelled {
+                    pending.withLock { $0.take() }?.resume(returning: nil)
+                    return
+                }
+                // A dedicated thread rather than the shared pool, which a few runaway
+                // patterns could otherwise use up.
+                let thread = Thread {
+                    let evaluation = evaluate(pattern: pattern, options: options, in: text, matchLimit: matchLimit)
+                    pending.withLock { $0.take() }?.resume(returning: evaluation)
+                }
+                thread.qualityOfService = .userInitiated
+                // The same stack as the main thread, where patterns were evaluated before.
+                thread.stackSize = 8 << 20
+                thread.start()
+            }
+        } onCancel: {
+            pending.withLock { $0.take() }?.resume(returning: nil)
+        }
     }
 
     static func makeRegex(pattern: String, options: RegexOptions) throws -> Regex<AnyRegexOutput> {

@@ -96,4 +96,20 @@ struct RegexEvaluatorTests {
         #expect(matches.count == 3)
         #expect(truncated)
     }
+
+    @Test func backgroundEvaluationMatchesTheSynchronousOne() async {
+        let evaluation = await RegexEvaluator.evaluateInBackground(pattern: #"\d+"#, options: RegexOptions(), in: "a1 b22")
+        #expect(evaluation == RegexEvaluator.evaluate(pattern: #"\d+"#, options: RegexOptions(), in: "a1 b22"))
+    }
+
+    @Test func cancellingABackgroundEvaluationReturnsWithoutWaitingForIt() async {
+        // Catastrophic backtracking: this would run for a very long time.
+        let text = String(repeating: "a", count: 40) + "!"
+        let task = Task {
+            await RegexEvaluator.evaluateInBackground(pattern: "^(a+)+$", options: RegexOptions(), in: text)
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        #expect(await task.value == nil)
+    }
 }

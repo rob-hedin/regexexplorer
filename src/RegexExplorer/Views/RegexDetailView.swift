@@ -7,22 +7,28 @@ import SwiftUI
 struct RegexDetailView: View {
     @Binding var regex: SavedRegex
     @State private var patternFocusRequest = 0
+    /// The most recent finished evaluation, with the input it was made from.
+    @State private var evaluated: EvaluatedInput?
+    /// Whether the current input has taken long enough to evaluate that the user should know.
+    @State private var isSlow = false
 
-    var body: some View {
-        // Replace and Filter need every match to be correct; only the match list is capped.
-        let evaluation = RegexEvaluator.evaluate(
+    /// Replace and Filter need every match to be correct; only the match list is capped.
+    private var input: EvaluationInput {
+        EvaluationInput(
             pattern: regex.pattern,
             options: regex.options,
-            in: regex.sampleText,
+            text: regex.sampleText,
             matchLimit: regex.mode == .match ? RegexEvaluator.defaultMatchLimit : .max
         )
+    }
 
+    var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
                 PatternField(
                     pattern: $regex.pattern,
                     allowsExtendedSyntax: regex.options.allowsExtendedSyntax,
-                    evaluation: evaluation,
+                    evaluation: evaluated?.evaluation,
                     focusRequest: patternFocusRequest
                 )
                 RegexOptionsBar(options: $regex.options)
@@ -40,10 +46,33 @@ struct RegexDetailView: View {
                     .accessibilityLabel("Test text")
             }
 
-            ResultsView(regex: $regex, evaluation: evaluation)
+            ResultsView(
+                regex: $regex,
+                evaluated: evaluated.map { (text: $0.input.text, evaluation: $0.evaluation) },
+                isSlow: isSlow
+            )
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
+        // Matching runs in the background so a slow pattern can't freeze the window. Until it
+        // finishes, the previous result stays, shown with the text it was made from.
+        .task(id: input) {
+            let input = input
+            isSlow = false
+            let slowTimer = Task {
+                try await Task.sleep(for: .milliseconds(300))
+                isSlow = true
+            }
+            defer { slowTimer.cancel() }
+            guard let evaluation = await RegexEvaluator.evaluateInBackground(
+                pattern: input.pattern,
+                options: input.options,
+                in: input.text,
+                matchLimit: input.matchLimit
+            ) else { return }
+            evaluated = EvaluatedInput(input: input, evaluation: evaluation)
+            isSlow = false
+        }
         .focusedSceneValue(\.editorActions, EditorActions(
             mode: regex.mode,
             setMode: { regex.mode = $0 },
@@ -52,11 +81,25 @@ struct RegexDetailView: View {
     }
 }
 
+/// Everything that decides a regex's matches.
+private struct EvaluationInput: Equatable {
+    let pattern: String
+    let options: RegexOptions
+    let text: String
+    let matchLimit: Int
+}
+
+private struct EvaluatedInput {
+    let input: EvaluationInput
+    let evaluation: RegexEvaluation
+}
+
 /// The pattern field, coloured by syntax, with an inline message when the pattern doesn't compile.
 private struct PatternField: View {
     @Binding var pattern: String
     let allowsExtendedSyntax: Bool
-    let evaluation: RegexEvaluation
+    /// `nil` while the current pattern hasn't been evaluated yet.
+    let evaluation: RegexEvaluation?
     let focusRequest: Int
 
     private var errorMessage: String? {
