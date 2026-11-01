@@ -163,7 +163,7 @@ struct FilterResult: Equatable, Sendable {
 
 enum LineFilter {
     /// Keeps the lines that contain at least one match, or with `inverted`, the lines that contain none.
-    /// A match that spans several lines counts for each of them.
+    /// Filter mode matches each line on its own, but a match that spans several lines counts for each of them.
     static func filter(_ text: String, matches: [RegexMatch], inverted: Bool) -> FilterResult {
         var lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
         // A final newline ends the last line rather than starting an empty one.

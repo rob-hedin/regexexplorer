@@ -34,10 +34,13 @@ enum RegexEvaluator {
     /// The most matches reported for one evaluation, to keep highlighting responsive.
     static let defaultMatchLimit = 1_000
 
+    /// With `eachLine`, every line is matched on its own, as Filter mode does: `^` and `$`
+    /// match at each line's ends and no match runs past a line break.
     static func evaluate(
         pattern: String,
         options: RegexOptions,
         in text: String,
+        eachLine: Bool = false,
         matchLimit: Int = defaultMatchLimit
     ) -> RegexEvaluation {
         guard !pattern.isEmpty else { return .noPattern }
@@ -52,12 +55,19 @@ enum RegexEvaluator {
         // `matches(of:)` always finds every match. `replacing` stops after `maxReplacements`,
         // so it collects one more than the limit (to know there are more) and no further.
         var matches: [RegexMatch] = []
-        _ = text.replacing(regex, maxReplacements: matchLimit == .max ? .max : matchLimit + 1) { match in
-            let groups = match.output.dropFirst().enumerated().map { offset, element in
-                CaptureGroup(number: offset + 1, name: element.name, range: element.range)
+        let wanted = matchLimit == .max ? .max : matchLimit + 1
+        // A substring is matched as if it were the whole text, and its ranges are the text's.
+        let subjects = eachLine
+            ? text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+            : [text[...]]
+        for subject in subjects where matches.count < wanted {
+            _ = subject.replacing(regex, maxReplacements: wanted - matches.count) { match in
+                let groups = match.output.dropFirst().enumerated().map { offset, element in
+                    CaptureGroup(number: offset + 1, name: element.name, range: element.range)
+                }
+                matches.append(RegexMatch(range: match.range, groups: groups))
+                return ""
             }
-            matches.append(RegexMatch(range: match.range, groups: groups))
-            return ""
         }
         let truncated = matches.count > matchLimit
         return .matches(truncated ? Array(matches.prefix(matchLimit)) : matches, truncated: truncated)
@@ -69,10 +79,11 @@ enum RegexEvaluator {
         pattern: String,
         options: RegexOptions,
         in text: String,
+        eachLine: Bool = false,
         matchLimit: Int = defaultMatchLimit
     ) async -> RegexEvaluation? {
         await MatchWorkers.shared.run {
-            evaluate(pattern: pattern, options: options, in: text, matchLimit: matchLimit)
+            evaluate(pattern: pattern, options: options, in: text, eachLine: eachLine, matchLimit: matchLimit)
         }
     }
 

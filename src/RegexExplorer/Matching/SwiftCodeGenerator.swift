@@ -23,6 +23,13 @@ enum CaptureGroupScanner {
         while index < characters.count {
             let character = characters[index]
             if character == "\\" {
+                // \Q…\E quotes its text, so nothing inside is a group or a flag.
+                if index + 1 < characters.count, characters[index + 1] == "Q" {
+                    index += 2
+                    while index < characters.count, !(characters[index] == "\\" && index + 1 < characters.count && characters[index + 1] == "E") {
+                        index += 1
+                    }
+                }
                 index += 2
                 continue
             }

@@ -157,4 +157,17 @@ struct RegexEvaluatorTests {
         }
         #expect(elapsed < .seconds(1))
     }
+
+    @Test func eachLineIsMatchedOnItsOwn() {
+        let text = "a\nb\nab"
+        guard case .matches(let matches, _) = RegexEvaluator.evaluate(pattern: "^b", options: RegexOptions(), in: text, eachLine: true) else {
+            Issue.record("Expected matches")
+            return
+        }
+        // ^ matches at the start of every line, without the line-anchors option.
+        #expect(matches.map { String(text[$0.range]) } == ["b"])
+        #expect(matches.first.map { text.distance(from: text.startIndex, to: $0.range.lowerBound) } == 2)
+        // No match runs past a line break.
+        #expect(RegexEvaluator.evaluate(pattern: #"a\nb"#, options: RegexOptions(), in: text, eachLine: true) == .matches([], truncated: false))
+    }
 }

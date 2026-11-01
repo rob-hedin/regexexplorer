@@ -108,6 +108,9 @@ struct SwiftCodeGeneratorTests {
         #expect(CaptureGroupScanner.groups(in: "(?x)a # (fake)\n(b)") == [nil])
         #expect(CaptureGroupScanner.groups(in: "(?x:a # (fake)\n)(b) # (c)") == [nil, nil])
         #expect(CaptureGroupScanner.groups(in: "(?-x:# (a))", allowsExtendedSyntax: true) == [nil])
+        // Quoted text holds neither flags nor groups.
+        #expect(CaptureGroupScanner.groups(in: #"\Q(?x)\E#(a)"#) == [nil])
+        #expect(CaptureGroupScanner.groups(in: #"\Q(a)"#).isEmpty)
         let pattern = "(?x)a # (fake)\n(b)"
         let match = try #require(try Regex(pattern).firstMatch(in: "ab"))
         #expect(CaptureGroupScanner.groups(in: pattern).count == match.output.count - 1)
