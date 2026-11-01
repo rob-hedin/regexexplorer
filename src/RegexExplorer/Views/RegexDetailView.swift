@@ -22,14 +22,21 @@ struct RegexDetailView: View {
         )
     }
 
-    /// The evaluation to show results from. Match mode's capped result would give a wrong
-    /// Replace or Filter result, so after switching mode those wait for the full evaluation.
+    /// The evaluation to show results from, fitted to the current mode while the next one runs.
+    /// Match mode's capped result would give a wrong Replace or Filter result, so those wait for
+    /// the full evaluation; a full result is capped for Match mode, to keep highlighting quick.
     private var shownEvaluation: EvaluatedInput? {
         guard let evaluated else { return nil }
-        if regex.mode != .match, case .matches(_, truncated: true) = evaluated.evaluation {
-            return nil
+        guard case .matches(let matches, let truncated) = evaluated.evaluation else { return evaluated }
+        if regex.mode != .match {
+            return truncated ? nil : evaluated
         }
-        return evaluated
+        let limit = RegexEvaluator.defaultMatchLimit
+        guard matches.count > limit else { return evaluated }
+        return EvaluatedInput(
+            input: evaluated.input,
+            evaluation: .matches(Array(matches.prefix(limit)), truncated: true)
+        )
     }
 
     var body: some View {
