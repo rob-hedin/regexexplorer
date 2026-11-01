@@ -57,6 +57,19 @@ struct CodeRequest {
 
     var hasNamedGroups: Bool { groups.contains { $0 != nil } }
 
+    /// A name for every group: its own, or "group2" and so on by number for an unnamed one,
+    /// with underscores added if the pattern already uses that name.
+    var groupNamesForEveryGroup: [String] {
+        var used = Set(groups.compactMap { $0 })
+        return groups.enumerated().map { offset, name in
+            if let name { return name }
+            var synthesized = "group\(offset + 1)"
+            while used.contains(synthesized) { synthesized += "_" }
+            used.insert(synthesized)
+            return synthesized
+        }
+    }
+
     /// The number of the group called `name`, starting at 1.
     func number(ofGroup name: String) -> Int? {
         groups.firstIndex(of: name).map { $0 + 1 }
@@ -86,13 +99,24 @@ struct CodeRequest {
 
     /// Comment lines warning about the parts of the pattern or options an engine lacks.
     func notes(engine: String, unsupported: [String], comment: String) -> [String] {
-        guard !unsupported.isEmpty else { return [] }
-        let list = EnglishList.join(unsupported)
-        return [
-            "\(comment) Note: \(engine) doesn't support \(list), so this pattern",
-            "\(comment) needs changing before it works the same way here.",
-            "",
-        ]
+        var lines: [String] = []
+        if !unsupported.isEmpty {
+            let list = EnglishList.join(unsupported)
+            lines += [
+                "\(comment) Note: \(engine) doesn't support \(list), so this pattern",
+                "\(comment) needs changing before it works the same way here.",
+            ]
+        }
+        // Swift's \b follows Unicode word rules unless "Simple word boundaries" is on; other
+        // engines only look at word characters, so "can't" holds a boundary for them.
+        if features.contains(.wordBoundary), !options.usesSimpleWordBoundaries {
+            lines += [
+                "\(comment) Note: \\b and \\B here only look at word characters, while the editor uses",
+                "\(comment) Unicode word rules, so they can match differently around apostrophes and",
+                "\(comment) other punctuation. Turn on simple word boundaries to see what this code does.",
+            ]
+        }
+        return lines.isEmpty ? [] : lines + [""]
     }
 }
 
@@ -111,6 +135,8 @@ struct PatternFeatures: OptionSet, Sendable {
     static let absoluteAnchor = PatternFeatures(rawValue: 1 << 7)
     /// `\Z` in particular, which some engines that have `\A` and `\z` lack.
     static let endBeforeFinalNewline = PatternFeatures(rawValue: 1 << 8)
+    /// `\b` or `\B`.
+    static let wordBoundary = PatternFeatures(rawValue: 1 << 9)
 
     init(rawValue: Int) {
         self.rawValue = rawValue
@@ -146,6 +172,7 @@ struct PatternFeatures: OptionSet, Sendable {
                     features.insert(.absoluteAnchor)
                     if marker == "\\Z" { features.insert(.endBeforeFinalNewline) }
                 }
+                if text.contains("\\b") || text.contains("\\B") { features.insert(.wordBoundary) }
             default:
                 break
             }
@@ -189,8 +216,8 @@ struct PatternRewrite {
     var dotMatchesNewlines = false
     /// Writes `^` as `\A` and `$` as `\Z`, for engines whose `^` and `$` always match at lines.
     var anchorsMatchWholeText = false
-    /// Names each unnamed group "group1", "group2" and so on, by its number.
-    var namesUnnamedGroups = false
+    /// Names for every group, by number, given to the unnamed ones (see ``CodeRequest/groupNamesForEveryGroup``).
+    var unnamedGroupNames: [String]?
 
     func apply(to pattern: String, groups: [String?], allowsExtendedSyntax: Bool) -> String {
         let characters = Array(pattern)
@@ -209,11 +236,15 @@ struct PatternRewrite {
             return (String(characters[start..<end]), end + 1)
         }
 
-        func backreference(to name: String) -> String {
+        /// `end` is where the reference ends in the pattern, to see what follows it.
+        func backreference(to name: String, endingAt end: Int) -> String {
             switch namedGroups {
-            case .keep, .angle: "\\k<\(name)>"
-            case .python: "(?P=\(name))"
-            case .unnamed: groups.firstIndex(of: name).map { "\\\($0 + 1)" } ?? "\\k<\(name)>"
+            case .keep, .angle: return "\\k<\(name)>"
+            case .python: return "(?P=\(name))"
+            case .unnamed:
+                guard let number = groups.firstIndex(of: name).map({ $0 + 1 }) else { return "\\k<\(name)>" }
+                // A digit straight after would join the number, as in \12, so wrap it.
+                return character(at: end)?.isNumber == true ? "(?:\\\(number))" : "\\\(number)"
             }
         }
 
@@ -233,7 +264,7 @@ struct PatternRewrite {
                 if namedGroups != .keep, marker == "k", let open = character(at: index + 2),
                    let terminator: Character = ["<": ">", "'": "'", "{": "}"][open],
                    let found = name(from: index + 3, terminator: terminator) {
-                    output += backreference(to: found.name)
+                    output += backreference(to: found.name, endingAt: found.end)
                     index = found.end
                     continue
                 }
@@ -281,8 +312,8 @@ struct PatternRewrite {
             if current == "(", let next = character(at: index + 1) {
                 if next != "?", next != "*" {
                     captureCount += 1
-                    if namesUnnamedGroups {
-                        output += "(?<group\(captureCount)>"
+                    if let unnamedGroupNames, captureCount <= unnamedGroupNames.count {
+                        output += "(?<\(unnamedGroupNames[captureCount - 1])>"
                         index += 1
                         continue
                     }
@@ -297,7 +328,7 @@ struct PatternRewrite {
                         named = name(from: index + 4, terminator: ">")
                     } else if namedGroups != .keep, marker == "P", character(at: index + 3) == "=",
                               let found = name(from: index + 4, terminator: ")") {
-                        output += backreference(to: found.name)
+                        output += backreference(to: found.name, endingAt: found.end)
                         index = found.end
                         continue
                     }

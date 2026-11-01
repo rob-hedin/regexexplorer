@@ -1,5 +1,6 @@
 // Copyright © 2026 Robert Hedin
 
+import AppKit
 import SwiftUI
 
 @main
@@ -15,7 +16,14 @@ struct RegexExplorerApp: App {
                 .appending(path: "regexes.json")
             return RegexLibrary(store: RegexLibraryStore(fileURL: fileURL))
         }
-        return RegexLibrary(store: .standard(), starterRegexes: StarterRegexes.make())
+        let library = RegexLibrary(store: .standard(), starterRegexes: StarterRegexes.make())
+        // Edits are saved after a short pause; don't lose the last ones when the app quits.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { library.saveNow() }
+        }
+        return library
     }
 
     var body: some Scene {

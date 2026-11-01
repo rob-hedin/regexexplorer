@@ -69,10 +69,14 @@ struct CodeGeneratorTests {
         #expect(generated.contains(#"replaceAll("$1\\2\\$")"#))
     }
 
-    @Test func cSharpNumbersUnnamedGroupsFirst() {
-        let generated = code(.csharp, regex(#"(?<y>a)(b)"#))
-        #expect(generated.contains(#"match.Groups["y"].Value); // Group 1 (y)"#))
-        #expect(generated.contains("match.Groups[1].Value); // Group 2"))
+    @Test func cSharpNumbersGroupsAsTheEditorDoes() {
+        // .NET would number unnamed groups first, so mixed groups are all made plain.
+        let mixed = code(.csharp, regex(#"(?<y>a)(b)"#))
+        #expect(mixed.contains(#"new Regex(@"(a)(b)")"#))
+        #expect(mixed.contains("match.Groups[1].Value); // Group 1 (y)"))
+        #expect(mixed.contains("match.Groups[2].Value); // Group 2"))
+        // Named groups alone keep their names.
+        #expect(code(.csharp, regex(#"(?<y>a)"#)).contains(#"match.Groups["y"].Value); // Group 1 (y)"#))
     }
 
     @Test func goAndRustWarnAboutLookarounds() {
@@ -150,5 +154,32 @@ struct CodeGeneratorTests {
         let rewrite = PatternRewrite(namedGroups: .python, dotMatchesNewlines: true, anchorsMatchWholeText: true)
         #expect(rewrite.apply(to: #"[.^$(?<n>)]\.\^(?'n'x)"#, groups: ["n"], allowsExtendedSyntax: false)
             == #"[.^$(?<n>)]\.\^(?P<n>x)"#)
+    }
+
+    @Test func javaScriptWritesAnEmptyPatternAsAConstructor() {
+        let generated = code(.javascript, regex(" ", options: RegexOptions(allowsExtendedSyntax: true)))
+        #expect(generated.contains(#"const regex = new RegExp("", "g");"#))
+    }
+
+    @Test func otherLanguagesWarnAboutUnicodeWordBoundaries() {
+        for language in CodeLanguage.allCases where language != .swift6 && language != .swift5 {
+            #expect(code(language, regex(#"\bt\b"#)).contains("Unicode word rules"), "\(language)")
+            #expect(!code(language, regex(#"\bt\b"#, options: RegexOptions(usesSimpleWordBoundaries: true))).contains("Unicode word rules"))
+        }
+        #expect(code(.php, regex(#"\bt"#)).hasPrefix("<?php\n\n// Note:"))
+    }
+
+    @Test func cSharpKeepsBackreferencesPointingAtTheSameGroup() {
+        let generated = code(.csharp, regex(#"(?<x>a)(b)\1\k<x>"#, mode: .replace, replacement: "${x}$2"))
+        #expect(generated.contains(#"new Regex(@"(a)(b)\1\1")"#))
+        #expect(generated.contains(#"regex.Replace(text, @"${1}${2}")"#))
+        // A digit after a converted reference mustn't join its number.
+        #expect(code(.csharp, regex(#"(?<x>a)(b)\k<x>2"#)).contains(#"new Regex(@"(a)(b)(?:\1)2")"#))
+    }
+
+    @Test func rubyNamesForUnnamedGroupsDontClash() {
+        let generated = code(.ruby, regex(#"(?<group2>a)(b)"#))
+        #expect(generated.contains(#"(?<group2>a)(?<group2_>b)"#))
+        #expect(generated.contains("puts match[:group2_] # Group 2"))
     }
 }

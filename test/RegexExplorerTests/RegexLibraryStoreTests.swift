@@ -69,4 +69,10 @@ final class RegexLibraryStoreTests {
         #expect(FileManager.default.fileExists(atPath: moved.path(percentEncoded: false)))
         #expect(try store.load().isEmpty)
     }
+
+    @Test func newerFormatIsRejected() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data(#"{"version": 99, "regexes": [], "added": true}"#.utf8).write(to: store.fileURL)
+        #expect(throws: RegexLibraryStore.NewerFormatError.self) { try store.load() }
+    }
 }

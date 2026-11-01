@@ -44,6 +44,9 @@ let samples: [Sample] = [
         options: RegexOptions(ignoresCase: true), mode: .filter, invertsFilter: true)),
     Sample(name: "filter-anchored", regex: SavedRegex(
         name: "Comments", pattern: "^#", sampleText: "# one\ncode\n# two", mode: .filter)),
+    // ^ starts every line in Filter mode, even with line anchors off.
+    Sample(name: "filter-line-start", regex: SavedRegex(
+        name: "Line start", pattern: "^b", sampleText: "a\nb", mode: .filter)),
     Sample(name: "specials-match", regex: SavedRegex(
         name: "Specials", pattern: #"[/"'`$#@{}\\]+"#,
         sampleText: #"a/b"c'd`e$f#g@h{i}j\k"#)),
@@ -82,9 +85,8 @@ func fileName(for language: CodeLanguage) -> String {
 
 /// What the generated code should print, worked out the way the editor works it out.
 func expectedOutput(for regex: SavedRegex) throws -> String {
-    let compiled: Regex<AnyRegexOutput>
     do {
-        compiled = try RegexEvaluator.makeRegex(pattern: regex.pattern, options: regex.options)
+        _ = try RegexEvaluator.makeRegex(pattern: regex.pattern, options: regex.options)
     } catch {
         // Swift's Regex can't compile some syntax (such as lookbehind) that the other
         // languages can, so work out what they should print with ICU instead.
@@ -105,10 +107,11 @@ func expectedOutput(for regex: SavedRegex) throws -> String {
     case .replace:
         return RegexReplacer.replace(in: text, matches: matches, template: regex.replacement).text + "\n"
     case .filter:
-        // The generated code matches each line on its own.
-        let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
-        let kept = lines.filter { $0.contains(compiled) != regex.invertsFilter }
-        return kept.joined(separator: "\n") + "\n"
+        // What the editor shows, so the generated code is checked against it.
+        guard case .matches(let lineMatches, _) = RegexEvaluator.evaluate(
+            pattern: regex.pattern, options: regex.options, in: text, eachLine: true, matchLimit: .max
+        ) else { throw CocoaError(.featureUnsupported) }
+        return LineFilter.filter(text, matches: lineMatches, inverted: regex.invertsFilter).text + "\n"
     }
 }
 

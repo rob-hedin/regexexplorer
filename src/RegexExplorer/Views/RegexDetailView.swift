@@ -18,6 +18,7 @@ struct RegexDetailView: View {
             pattern: regex.pattern,
             options: regex.options,
             text: regex.sampleText,
+            eachLine: regex.mode == .filter,
             matchLimit: regex.mode == .match ? RegexEvaluator.defaultMatchLimit : .max
         )
     }
@@ -27,6 +28,8 @@ struct RegexDetailView: View {
     /// the full evaluation; a full result is capped for Match mode, to keep highlighting quick.
     private var shownEvaluation: EvaluatedInput? {
         guard let evaluated else { return nil }
+        // Matches of the whole text aren't Filter mode's, nor the other way round.
+        guard evaluated.input.eachLine == (regex.mode == .filter) else { return nil }
         guard case .matches(let matches, let truncated) = evaluated.evaluation else { return evaluated }
         if regex.mode != .match {
             return truncated ? nil : evaluated
@@ -85,6 +88,7 @@ struct RegexDetailView: View {
                 pattern: input.pattern,
                 options: input.options,
                 in: input.text,
+                eachLine: input.eachLine,
                 matchLimit: input.matchLimit
             ) else { return }
             evaluated = EvaluatedInput(input: input, evaluation: evaluation)
@@ -103,6 +107,8 @@ private struct EvaluationInput: Equatable {
     let pattern: String
     let options: RegexOptions
     let text: String
+    /// Filter mode matches each line on its own, like the code it exports.
+    let eachLine: Bool
     let matchLimit: Int
 }
 

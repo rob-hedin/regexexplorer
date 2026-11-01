@@ -109,8 +109,9 @@ enum JavaScriptCodeGenerator {
     }
 
     /// A /…/ literal, or `new RegExp(…)` for a pattern that a literal can't hold.
+    /// An empty one can't be a literal either, because `//` starts a comment.
     static func regexLiteral(_ pattern: String, flags: String) -> String {
-        guard !pattern.contains(where: \.isNewline) else {
+        guard !pattern.isEmpty, !pattern.contains(where: \.isNewline) else {
             return "new RegExp(\(StringLiteralStyle().literal(pattern)), \"\(flags)\")"
         }
         return "/\(SlashEscaper.escape(pattern))/\(flags)"
@@ -152,7 +153,8 @@ enum PerlCodeGenerator {
             control: { "\\x{" + StringLiteralStyle.hex($0, width: 2) + "}" }
         ).literal(request.sampleText)
 
-        var lines = [
+        var lines = request.notes(engine: "Perl", unsupported: [], comment: "#")
+        lines += [
             "use strict;",
             "use warnings;",
             "use utf8;",
@@ -242,9 +244,8 @@ enum PHPCodeGenerator {
             control: { "\\u{" + StringLiteralStyle.hex($0, width: 1) + "}" }
         ).literal(request.sampleText)
 
-        var lines = [
-            "<?php",
-            "",
+        var lines = ["<?php", ""] + request.notes(engine: "PHP", unsupported: [], comment: "//")
+        lines += [
             "$pattern = \(singleQuoted(pattern));",
             "$text = \(text);",
             "",
@@ -291,9 +292,9 @@ enum RubyCodeGenerator {
         let options = request.options
         // Ruby captures only named groups when a pattern has any, so give the others names too.
         let namesEveryGroup = request.hasNamedGroups && request.groups.contains(nil)
-        let names = request.groups.enumerated().map { $1 ?? "group\($0 + 1)" }
+        let names = request.groupNamesForEveryGroup
         var rewrite = PatternRewrite(namedGroups: .angle)
-        rewrite.namesUnnamedGroups = namesEveryGroup
+        rewrite.unnamedGroupNames = namesEveryGroup ? names : nil
         // Ruby's ^ and $ always match at line breaks.
         rewrite.anchorsMatchWholeText = !options.anchorsMatchLineEndings
         let pattern = request.pattern(rewrite)

@@ -135,4 +135,41 @@ struct RegexEvaluatorTests {
         // It runs once the slow work finishes, on the same thread.
         #expect(await queued.value == .matches([], truncated: false))
     }
+
+    @Test func matchesAgreeWithSwiftsOwnMatching() throws {
+        // Including empty matches, which the search has to step past.
+        for (pattern, text) in [("a*", "baab"), (#"\b"#, "ab cd"), ("^", "x\ny"), ("(a)|b", "abba")] {
+            let expected = try "\(text)".matches(of: Regex(pattern)).map(\.range)
+            guard case .matches(let matches, false) = RegexEvaluator.evaluate(pattern: pattern, options: RegexOptions(), in: text) else {
+                Issue.record("Expected matches for \(pattern)")
+                continue
+            }
+            #expect(matches.map(\.range) == expected, "\(pattern)")
+        }
+    }
+
+    @Test func matchLimitStopsTheSearch() {
+        // Finding all two million matches would take far longer than this test allows.
+        let text = String(repeating: "a", count: 2_000_000)
+        let clock = ContinuousClock()
+        let elapsed = clock.measure {
+            _ = RegexEvaluator.evaluate(pattern: "a", options: RegexOptions(), in: text, matchLimit: 10)
+        }
+        #expect(elapsed < .seconds(1))
+    }
+
+    @Test func eachLineIsMatchedOnItsOwn() {
+        let text = "a\nb\nab"
+        guard case .matches(let matches, _) = RegexEvaluator.evaluate(pattern: "^b", options: RegexOptions(), in: text, eachLine: true) else {
+            Issue.record("Expected matches")
+            return
+        }
+        // ^ matches at the start of every line, without the line-anchors option.
+        #expect(matches.map { String(text[$0.range]) } == ["b"])
+        #expect(matches.first.map { text.distance(from: text.startIndex, to: $0.range.lowerBound) } == 2)
+        // A final newline doesn't add an empty line to match.
+        #expect(RegexEvaluator.evaluate(pattern: "^$", options: RegexOptions(), in: "a\n", eachLine: true) == .matches([], truncated: false))
+        // No match runs past a line break.
+        #expect(RegexEvaluator.evaluate(pattern: #"a\nb"#, options: RegexOptions(), in: text, eachLine: true) == .matches([], truncated: false))
+    }
 }

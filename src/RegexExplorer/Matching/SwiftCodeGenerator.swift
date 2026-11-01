@@ -10,6 +10,10 @@ enum CaptureGroupScanner {
         var groups: [String?] = []
         var index = 0
         var inClass = false
+        // Whether # starts a comment here. Inline flags such as (?x) or (?-x:…) change it,
+        // until the end of the group they're in.
+        var extended = allowsExtendedSyntax
+        var enclosingExtended: [Bool] = []
 
         func name(from start: Int, upTo terminator: Character) -> String? {
             guard let end = characters[start...].firstIndex(of: terminator) else { return nil }
@@ -19,6 +23,13 @@ enum CaptureGroupScanner {
         while index < characters.count {
             let character = characters[index]
             if character == "\\" {
+                // \Q…\E quotes its text, so nothing inside is a group or a flag.
+                if index + 1 < characters.count, characters[index + 1] == "Q" {
+                    index += 2
+                    while index < characters.count, !(characters[index] == "\\" && index + 1 < characters.count && characters[index + 1] == "E") {
+                        index += 1
+                    }
+                }
                 index += 2
                 continue
             }
@@ -33,10 +44,15 @@ enum CaptureGroupScanner {
                 // A "]" straight after "[" or "[^" is a literal member, not the end of the class.
                 if index + 1 < characters.count, characters[index + 1] == "^" { index += 1 }
                 if index + 1 < characters.count, characters[index + 1] == "]" { index += 1 }
-            case "#" where allowsExtendedSyntax:
+            case "#" where extended:
                 while index < characters.count, !characters[index].isNewline { index += 1 }
+            case ")":
+                if let outer = enclosingExtended.popLast() { extended = outer }
             case "(":
                 let rest = characters[(index + 1)...]
+                let flags = inlineFlags(in: characters, after: index)
+                if flags?.endsGroup != true { enclosingExtended.append(extended) }
+                if let flags, let setsExtended = flags.extended { extended = setsExtended }
                 if rest.first == "?" {
                     let afterQuestion = index + 2
                     let marker = afterQuestion < characters.count ? characters[afterQuestion] : nil
@@ -54,12 +70,40 @@ enum CaptureGroupScanner {
                 } else if rest.first != "*" {
                     groups.append(nil)
                 }
+                // Step over standalone flags, so their ")" doesn't close the enclosing group.
+                if let flags, flags.endsGroup { index = flags.end }
             default:
                 break
             }
             index += 1
         }
         return groups
+    }
+
+    /// For inline flags such as `(?x)`, `(?i-x:` or `(?^:` opening at `open`: whether they turn
+    /// extended syntax on or off (`nil` if they leave it alone), and whether they end at `)`
+    /// rather than starting a group, and where the `)` or `:` is. `nil` when the parenthesis
+    /// doesn't start inline flags.
+    private static func inlineFlags(in characters: [Character], after open: Int) -> (extended: Bool?, endsGroup: Bool, end: Int)? {
+        guard open + 1 < characters.count, characters[open + 1] == "?" else { return nil }
+        var extended: Bool?
+        var turningOff = false
+        var index = open + 2
+        while index < characters.count {
+            switch characters[index] {
+            case ")", ":":
+                // "(?:" alone is a plain non-capturing group.
+                guard index > open + 2 else { return nil }
+                return (extended, characters[index] == ")", index)
+            case "^": extended = false
+            case "-": turningOff = true
+            case "x": extended = !turningOff
+            case let flag where flag.isLetter: break
+            default: return nil
+            }
+            index += 1
+        }
+        return nil
     }
 }
 
@@ -193,8 +237,10 @@ enum SwiftCodeGenerator {
         let parsed = ReplacementTemplate(template, groupCount: groups.count, groupNames: Set(groups.compactMap { $0 }))
         let usesGroups = parsed.segments.contains { if case .literal = $0 { false } else { true } }
         guard usesGroups else {
+            // The parsed text, so "$$" becomes the "$" the editor shows.
+            let literal = parsed.segments.map { if case .literal(let literal) = $0 { literal } else { "" } }.joined()
             return [
-                "let result = text.replacing(regex, with: \(stringLiteral(template)))",
+                "let result = text.replacing(regex, with: \(stringLiteral(literal)))",
                 "print(result)",
             ]
         }
