@@ -173,6 +173,8 @@ struct CodeGeneratorTests {
         let generated = code(.csharp, regex(#"(?<x>a)(b)\1\k<x>"#, mode: .replace, replacement: "${x}$2"))
         #expect(generated.contains(#"new Regex(@"(a)(b)\1\1")"#))
         #expect(generated.contains(#"regex.Replace(text, @"${1}${2}")"#))
+        // A digit after a converted reference mustn't join its number.
+        #expect(code(.csharp, regex(#"(?<x>a)(b)\k<x>2"#)).contains(#"new Regex(@"(a)(b)(?:\1)2")"#))
     }
 
     @Test func rubyNamesForUnnamedGroupsDontClash() {

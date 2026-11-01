@@ -236,11 +236,15 @@ struct PatternRewrite {
             return (String(characters[start..<end]), end + 1)
         }
 
-        func backreference(to name: String) -> String {
+        /// `end` is where the reference ends in the pattern, to see what follows it.
+        func backreference(to name: String, endingAt end: Int) -> String {
             switch namedGroups {
-            case .keep, .angle: "\\k<\(name)>"
-            case .python: "(?P=\(name))"
-            case .unnamed: groups.firstIndex(of: name).map { "\\\($0 + 1)" } ?? "\\k<\(name)>"
+            case .keep, .angle: return "\\k<\(name)>"
+            case .python: return "(?P=\(name))"
+            case .unnamed:
+                guard let number = groups.firstIndex(of: name).map({ $0 + 1 }) else { return "\\k<\(name)>" }
+                // A digit straight after would join the number, as in \12, so wrap it.
+                return character(at: end)?.isNumber == true ? "(?:\\\(number))" : "\\\(number)"
             }
         }
 
@@ -260,7 +264,7 @@ struct PatternRewrite {
                 if namedGroups != .keep, marker == "k", let open = character(at: index + 2),
                    let terminator: Character = ["<": ">", "'": "'", "{": "}"][open],
                    let found = name(from: index + 3, terminator: terminator) {
-                    output += backreference(to: found.name)
+                    output += backreference(to: found.name, endingAt: found.end)
                     index = found.end
                     continue
                 }
@@ -324,7 +328,7 @@ struct PatternRewrite {
                         named = name(from: index + 4, terminator: ">")
                     } else if namedGroups != .keep, marker == "P", character(at: index + 3) == "=",
                               let found = name(from: index + 4, terminator: ")") {
-                        output += backreference(to: found.name)
+                        output += backreference(to: found.name, endingAt: found.end)
                         index = found.end
                         continue
                     }
