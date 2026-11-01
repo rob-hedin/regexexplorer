@@ -129,6 +129,8 @@ struct CodeGeneratorTests {
         // An already escaped quote stays as it is.
         #expect(code(.perl, regex(#"it\'s"#)).contains(#"qr'it\'s'"#))
         #expect(PerlCodeGenerator.quotedForSingleQuoteRegex(#"a\"#) == #"a\\"#)
+        // A combining mark after the quote makes one Character, but Perl still sees the quote.
+        #expect(PerlCodeGenerator.quotedForSingleQuoteRegex("a'\u{0301}b") == "a\\'\u{0301}b")
     }
 
     @Test func rawStringsGetDelimitersWhenNeeded() {

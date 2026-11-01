@@ -202,19 +202,21 @@ enum PerlCodeGenerator {
     /// is already escaped, as in `\'`, is left alone. A trailing odd backslash is doubled so it
     /// can't escape the closing quote.
     static func quotedForSingleQuoteRegex(_ pattern: String) -> String {
-        var result = ""
+        // Perl reads scalars, not characters: a quote followed by a combining mark is one
+        // Character in Swift but still ends the literal.
+        var result = String.UnicodeScalarView()
         var backslashes = 0
-        for character in pattern {
-            if character == "'", backslashes.isMultiple(of: 2) {
+        for scalar in pattern.unicodeScalars {
+            if scalar == "'", backslashes.isMultiple(of: 2) {
                 result.append("\\")
             }
-            result.append(character)
-            backslashes = character == "\\" ? backslashes + 1 : 0
+            result.append(scalar)
+            backslashes = scalar == "\\" ? backslashes + 1 : 0
         }
         if !backslashes.isMultiple(of: 2) {
             result.append("\\")
         }
-        return result
+        return String(result)
     }
 }
 
