@@ -123,6 +123,16 @@ struct CodeGeneratorTests {
         #expect(code(.php, saved).contains(#"'/it\'s\\d/u'"#))
     }
 
+    @Test func perlCantBeBrokenOutOfByBackslashedQuotes() {
+        // A backslash before the quote must not leave the quote unescaped.
+        #expect(code(.perl, regex(#"\\';print("x");#"#)).contains(#"qr'\\\';print("x");#'"#))
+        // An already escaped quote stays as it is.
+        #expect(code(.perl, regex(#"it\'s"#)).contains(#"qr'it\'s'"#))
+        #expect(PerlCodeGenerator.quotedForSingleQuoteRegex(#"a\"#) == #"a\\"#)
+        // A combining mark after the quote makes one Character, but Perl still sees the quote.
+        #expect(PerlCodeGenerator.quotedForSingleQuoteRegex("a'\u{0301}b") == "a\\'\u{0301}b")
+    }
+
     @Test func rawStringsGetDelimitersWhenNeeded() {
         #expect(RustCodeGenerator.rawLiteral(#"a"b"#) == ##"r#"a"b"#"##)
         #expect(CppCodeGenerator.rawLiteral(#"(a)""#) == #"R"x((a)")x""#)

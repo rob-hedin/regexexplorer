@@ -1,5 +1,6 @@
 // Copyright © 2026 Robert Hedin
 
+import Foundation
 import Testing
 @testable import RegexExplorer
 
@@ -95,5 +96,43 @@ struct RegexEvaluatorTests {
         }
         #expect(matches.count == 3)
         #expect(truncated)
+    }
+
+    @Test func backgroundEvaluationMatchesTheSynchronousOne() async {
+        let evaluation = await RegexEvaluator.evaluateInBackground(pattern: #"\d+"#, options: RegexOptions(), in: "a1 b22")
+        #expect(evaluation == RegexEvaluator.evaluate(pattern: #"\d+"#, options: RegexOptions(), in: "a1 b22"))
+    }
+
+    @Test func cancellingABackgroundEvaluationReturnsWithoutWaitingForIt() async {
+        // Catastrophic backtracking: this would run for a very long time.
+        let text = String(repeating: "a", count: 40) + "!"
+        let task = Task {
+            await RegexEvaluator.evaluateInBackground(pattern: "^(a+)+$", options: RegexOptions(), in: text)
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        #expect(await task.value == nil)
+    }
+
+    @Test func busyWorkersQueueNewWorkAndSkipCancelledRequests() async {
+        let workers = MatchWorkers(threadLimit: 1)
+        let slow = Task {
+            await workers.run {
+                Thread.sleep(forTimeInterval: 0.3)
+                return .noPattern
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+        // The only thread is busy, so these wait in the queue.
+        let skipped = Task { await workers.run { .invalidPattern("should not run") } }
+        let queued = Task { await workers.run { .matches([], truncated: false) } }
+        try? await Task.sleep(for: .milliseconds(50))
+        skipped.cancel()
+        slow.cancel()
+
+        #expect(await slow.value == nil)
+        #expect(await skipped.value == nil)
+        // It runs once the slow work finishes, on the same thread.
+        #expect(await queued.value == .matches([], truncated: false))
     }
 }

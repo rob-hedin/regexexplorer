@@ -1,6 +1,7 @@
 // Copyright © 2026 Robert Hedin
 
 import Foundation
+import os
 
 /// One capture group within a match. Group 0 (the whole match) is not included.
 struct CaptureGroup: Hashable, Sendable {
@@ -58,6 +59,19 @@ enum RegexEvaluator {
         return .matches(matches, truncated: found.count > matchLimit)
     }
 
+    /// Evaluates on one of a few dedicated threads, so a pattern that backtracks for a long
+    /// time can't stall the caller. Returns `nil` as soon as the calling task is cancelled.
+    static func evaluateInBackground(
+        pattern: String,
+        options: RegexOptions,
+        in text: String,
+        matchLimit: Int = defaultMatchLimit
+    ) async -> RegexEvaluation? {
+        await MatchWorkers.shared.run {
+            evaluate(pattern: pattern, options: options, in: text, matchLimit: matchLimit)
+        }
+    }
+
     static func makeRegex(pattern: String, options: RegexOptions) throws -> Regex<AnyRegexOutput> {
         // Swift Regex has no modifier method for extended syntax, so use the inline flag.
         var regex = try Regex(options.allowsExtendedSyntax ? "(?x)" + pattern : pattern)
@@ -75,5 +89,92 @@ enum RegexEvaluator {
             regex = regex.wordBoundaryKind(.simple)
         }
         return regex
+    }
+}
+
+/// A small, fixed set of threads that evaluations run on.
+///
+/// Swift Regex can't be interrupted, so a cancelled evaluation keeps its thread busy until it
+/// finishes, and its result is dropped. Capping the threads keeps runaway patterns from piling
+/// up: once every thread is busy, new work waits in a queue that cancelled requests leave.
+/// Dedicated threads are used rather than the shared concurrency pool, which runaway patterns
+/// would otherwise tie up.
+final class MatchWorkers: Sendable {
+    static let shared = MatchWorkers(threadLimit: 3)
+
+    private struct Job: Sendable {
+        let id: UInt64
+        let work: @Sendable () -> RegexEvaluation
+    }
+
+    private struct State: Sendable {
+        var runningThreads = 0
+        var queue: [Job] = []
+        var waiting: [UInt64: CheckedContinuation<RegexEvaluation?, Never>] = [:]
+        var lastID: UInt64 = 0
+    }
+
+    private let threadLimit: Int
+    private let state = OSAllocatedUnfairLock(initialState: State())
+
+    init(threadLimit: Int) {
+        self.threadLimit = threadLimit
+    }
+
+    /// Runs `work` on a worker thread and returns its result, or `nil` if the task is cancelled first.
+    func run(_ work: @escaping @Sendable () -> RegexEvaluation) async -> RegexEvaluation? {
+        let id = state.withLock { state in
+            state.lastID += 1
+            return state.lastID
+        }
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                let startsThread = state.withLock { state -> Bool? in
+                    guard !Task.isCancelled else { return nil }
+                    state.waiting[id] = continuation
+                    guard state.runningThreads < threadLimit else {
+                        state.queue.append(Job(id: id, work: work))
+                        return false
+                    }
+                    state.runningThreads += 1
+                    return true
+                }
+                switch startsThread {
+                case nil: continuation.resume(returning: nil)
+                case true?: startThread(with: Job(id: id, work: work))
+                case false?: break
+                }
+            }
+        } onCancel: {
+            let continuation = state.withLock { state in
+                state.queue.removeAll { $0.id == id }
+                return state.waiting.removeValue(forKey: id)
+            }
+            continuation?.resume(returning: nil)
+        }
+    }
+
+    /// Starts a thread that runs `job`, then queued jobs until the queue is empty.
+    private func startThread(with job: Job) {
+        let thread = Thread { [self] in
+            var next: Job? = job
+            while let job = next {
+                let result = job.work()
+                let continuation: CheckedContinuation<RegexEvaluation?, Never>?
+                (continuation, next) = state.withLock { state in
+                    let continuation = state.waiting.removeValue(forKey: job.id)
+                    guard !state.queue.isEmpty else {
+                        state.runningThreads -= 1
+                        return (continuation, nil)
+                    }
+                    return (continuation, state.queue.removeFirst())
+                }
+                continuation?.resume(returning: result)
+            }
+        }
+        thread.qualityOfService = .userInitiated
+        // The same stack as the main thread, where patterns were evaluated before.
+        thread.stackSize = 8 << 20
+        thread.start()
     }
 }

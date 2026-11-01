@@ -69,6 +69,27 @@ final class RegexLibraryTests {
         #expect(siblings.contains { $0.hasPrefix("regexes.unreadable-") })
     }
 
+    @Test func unreadableFileThatCantBeMovedIsNeverOverwritten() throws {
+        let folder = store.fileURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("not json".utf8).write(to: store.fileURL)
+        // A folder that can't be written to stops the file being moved aside.
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path(percentEncoded: false))
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path(percentEncoded: false))
+        }
+
+        let library = RegexLibrary(store: store)
+        let loadError = try #require(library.lastError)
+        // Let saving succeed again, as it might if the folder's permissions changed.
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path(percentEncoded: false))
+        library.add()
+
+        #expect(try Data(contentsOf: store.fileURL) == Data("not json".utf8))
+        #expect(library.regexes.count == 1)
+        #expect(library.lastError == loadError)
+    }
+
     @Test func startersAreSavedWhenNothingHasBeenSaved() {
         let starters = [SavedRegex(name: "Zip", pattern: #"^\d{5}$"#), SavedRegex(name: "Integer", pattern: #"^-?\d+$"#)]
         let library = RegexLibrary(store: store, starterRegexes: starters)
