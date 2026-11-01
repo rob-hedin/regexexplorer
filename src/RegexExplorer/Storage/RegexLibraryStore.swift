@@ -23,6 +23,16 @@ struct RegexLibraryStore: Sendable {
         }
     }
 
+    /// A file written by a later release, in a format this one may not fully understand.
+    struct NewerFormatError: LocalizedError {
+        let version: Int
+
+        var errorDescription: String? {
+            "The file uses format \(version), but this version of RegEx Explorer only understands "
+                + "format \(File.currentVersion) or earlier."
+        }
+    }
+
     let fileURL: URL
 
     init(fileURL: URL) {
@@ -44,12 +54,22 @@ struct RegexLibraryStore: Sendable {
     }
 
     /// Loads the saved regexes. A missing file means nothing has been saved yet.
+    /// Throws ``NewerFormatError`` for a file from a later release, which saving would damage.
     func load() throws -> [SavedRegex] {
         guard fileExists else {
             return []
         }
         let data = try Data(contentsOf: fileURL)
+        // Check the version before the rest, which a later format might lay out differently.
+        let version = try Self.decoder.decode(Version.self, from: data).version
+        guard version <= File.currentVersion else {
+            throw NewerFormatError(version: version)
+        }
         return try Self.decoder.decode(File.self, from: data).regexes
+    }
+
+    private struct Version: Decodable {
+        let version: Int
     }
 
     func save(_ regexes: [SavedRegex]) throws {

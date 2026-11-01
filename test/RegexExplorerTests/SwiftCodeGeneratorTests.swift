@@ -102,4 +102,19 @@ struct SwiftCodeGeneratorTests {
         #expect(code.contains(#"let regex = try Regex("(?x)a # letter\nb")"#))
         #expect(code.contains(#"print(match.output[0].substring ?? "") // The whole match"#))
     }
+
+    @Test func scannerFollowsInlineExtendedSyntaxFlags() throws {
+        // (?x) turns comments on for the rest of the group; (?-x:…) turns them off inside.
+        #expect(CaptureGroupScanner.groups(in: "(?x)a # (fake)\n(b)") == [nil])
+        #expect(CaptureGroupScanner.groups(in: "(?x:a # (fake)\n)(b) # (c)") == [nil, nil])
+        #expect(CaptureGroupScanner.groups(in: "(?-x:# (a))", allowsExtendedSyntax: true) == [nil])
+        let pattern = "(?x)a # (fake)\n(b)"
+        let match = try #require(try Regex(pattern).firstMatch(in: "ab"))
+        #expect(CaptureGroupScanner.groups(in: pattern).count == match.output.count - 1)
+    }
+
+    @Test func replacementWithoutGroupsUsesTheParsedText() {
+        let regex = SavedRegex(name: "Dollar", pattern: #"\d"#, mode: .replace, replacement: "$$")
+        #expect(SwiftCodeGenerator.code(for: regex).contains(#"let result = text.replacing(regex, with: "$")"#))
+    }
 }

@@ -149,7 +149,8 @@ enum JavaCodeGenerator {
         case .replace: break
         }
 
-        var lines = imports.map { "import \($0);" }
+        var lines = request.notes(engine: "Java", unsupported: [], comment: "//")
+        lines += imports.map { "import \($0);" }
         lines += [
             "",
             "public class Main {",
@@ -217,13 +218,16 @@ enum CSharpCodeGenerator {
         var unsupported: [String] = []
         if request.features.contains(.possessiveQuantifier) { unsupported.append("possessive quantifiers") }
 
-        let pattern = request.pattern(PatternRewrite(namedGroups: .angle))
+        // .NET numbers unnamed groups first and named groups after them, which would change
+        // what a numbered backreference such as \1 refers to. So when the pattern mixes the two,
+        // its named groups become plain ones, numbered as in the editor.
+        let mixesGroups = request.hasNamedGroups && request.groups.contains(nil)
+        let pattern = request.pattern(PatternRewrite(namedGroups: mixesGroups ? .unnamed : .angle))
         let flagArgument = flags.isEmpty ? "" : ", " + flags.joined(separator: " | ")
 
-        // .NET numbers unnamed groups first and named groups after them, so name the named ones.
         func group(_ number: Int) -> String {
-            if let name = request.groups[number - 1] { return StringLiteralStyle().literal(name) }
-            return String(request.groups[..<number].filter { $0 == nil }.count)
+            guard !mixesGroups else { return String(number) }
+            return request.groups[number - 1].map { StringLiteralStyle().literal($0) } ?? String(number)
         }
 
         var lines = request.notes(engine: ".NET", unsupported: unsupported, comment: "//")
@@ -252,8 +256,8 @@ enum CSharpCodeGenerator {
                 switch segment {
                 case .literal(let literal): literal.replacing("$", with: "$$")
                 case .group(0): "$0"
-                case .group(let number): request.groups[number - 1].map { "${\($0)}" } ?? "${\(group(number))}"
-                case .namedGroup(let name): "${\(name)}"
+                case .group(let number): mixesGroups ? "${\(number)}" : request.groups[number - 1].map { "${\($0)}" } ?? "${\(number)}"
+                case .namedGroup(let name): request.number(ofGroup: name).map { mixesGroups ? "${\($0)}" : "${\(name)}" } ?? "${\(name)}"
                 }
             }
             .joined()
@@ -293,7 +297,8 @@ enum KotlinCodeGenerator {
         default: ", setOf(\(regexOptions.joined(separator: ", ")))"
         }
 
-        var lines = [
+        var lines = request.notes(engine: "Kotlin", unsupported: [], comment: "//")
+        lines += [
             "fun main() {",
             "    val regex = Regex(\(style.literal(pattern))\(optionArgument))",
             "    val text = \(style.literal(request.sampleText))",

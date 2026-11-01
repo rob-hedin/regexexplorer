@@ -49,14 +49,18 @@ enum RegexEvaluator {
             return .invalidPattern(String(describing: error))
         }
 
-        let found = text.matches(of: regex)
-        let matches = found.prefix(matchLimit).map { match in
+        // `matches(of:)` always finds every match. `replacing` stops after `maxReplacements`,
+        // so it collects one more than the limit (to know there are more) and no further.
+        var matches: [RegexMatch] = []
+        _ = text.replacing(regex, maxReplacements: matchLimit == .max ? .max : matchLimit + 1) { match in
             let groups = match.output.dropFirst().enumerated().map { offset, element in
                 CaptureGroup(number: offset + 1, name: element.name, range: element.range)
             }
-            return RegexMatch(range: match.range, groups: groups)
+            matches.append(RegexMatch(range: match.range, groups: groups))
+            return ""
         }
-        return .matches(matches, truncated: found.count > matchLimit)
+        let truncated = matches.count > matchLimit
+        return .matches(truncated ? Array(matches.prefix(matchLimit)) : matches, truncated: truncated)
     }
 
     /// Evaluates on one of a few dedicated threads, so a pattern that backtracks for a long

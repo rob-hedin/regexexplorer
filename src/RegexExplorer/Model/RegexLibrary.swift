@@ -3,7 +3,8 @@
 import Foundation
 import Observation
 
-/// The user's collection of saved regexes. Every change is written to the store.
+/// The user's collection of saved regexes. Every change is written to the store: edits shortly
+/// after typing pauses, and additions and deletions straight away.
 @MainActor
 @Observable
 final class RegexLibrary {
@@ -12,9 +13,14 @@ final class RegexLibrary {
     private(set) var lastError: String?
 
     @ObservationIgnored private let store: RegexLibraryStore
-    /// Set when an unreadable file couldn't be moved aside. Saving would then replace it,
-    /// so changes stay in memory and the file is left for the user to recover.
+    /// Set when an unreadable file couldn't be moved aside, or the file is from a newer
+    /// release. Saving would then replace it, so changes stay in memory and the file is kept.
     @ObservationIgnored private var savingIsBlocked = false
+    /// A save waiting for edits to pause, so typing doesn't rewrite the file on every keystroke.
+    @ObservationIgnored private var pendingSave: Task<Void, Never>?
+
+    /// How long edits must pause before they're saved.
+    static let saveDelay = Duration.milliseconds(500)
 
     /// Loads the library from `store`. If nothing has been saved yet, the library starts
     /// with `starterRegexes` and saves them; an existing file, even an empty one, is never added to.
@@ -48,11 +54,17 @@ final class RegexLibrary {
         var updated = regex
         updated.modifiedAt = .now
         regexes[index] = updated
-        persist()
+        scheduleSave()
     }
 
     func delete(ids: Set<SavedRegex.ID>) {
         regexes.removeAll { ids.contains($0.id) }
+        persist()
+    }
+
+    /// Writes any edits that are waiting to be saved, such as when the app quits.
+    func saveNow() {
+        guard pendingSave != nil else { return }
         persist()
     }
 
@@ -74,6 +86,11 @@ final class RegexLibrary {
     private func load() {
         do {
             regexes = try store.load()
+        } catch let error as RegexLibraryStore.NewerFormatError {
+            // The file is fine, just newer: leave it where it is and don't overwrite it.
+            savingIsBlocked = true
+            lastError = "Your saved regexes were saved by a newer version of RegEx Explorer, "
+                + "so they can't be opened and changes won't be saved. \(error.localizedDescription)"
         } catch {
             // Keep the unreadable file for the user rather than overwriting it on the next save.
             if let moved = try? store.quarantineUnreadableFile() {
@@ -88,7 +105,18 @@ final class RegexLibrary {
         }
     }
 
+    private func scheduleSave() {
+        pendingSave?.cancel()
+        pendingSave = Task { [weak self] in
+            try? await Task.sleep(for: Self.saveDelay)
+            guard !Task.isCancelled else { return }
+            self?.persist()
+        }
+    }
+
     private func persist() {
+        pendingSave?.cancel()
+        pendingSave = nil
         guard !savingIsBlocked else { return }
         do {
             try store.save(regexes)

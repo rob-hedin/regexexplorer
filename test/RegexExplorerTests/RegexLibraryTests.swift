@@ -29,6 +29,7 @@ final class RegexLibraryTests {
         var regex = library.add(name: "Domain")
         regex.pattern = #"\w+\.com"#
         library.update(regex)
+        library.saveNow()
 
         let reloaded = RegexLibrary(store: store)
         #expect(reloaded.regexes.map(\.name) == ["Domain"])
@@ -116,5 +117,27 @@ final class RegexLibraryTests {
         let library = RegexLibrary(store: store, starterRegexes: [SavedRegex(name: "Zip")])
         #expect(library.regexes.isEmpty)
         #expect(library.lastError != nil)
+    }
+
+    @Test func newerFormatIsLeftAlone() throws {
+        try FileManager.default.createDirectory(at: store.fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let newer = Data(#"{"version": 99, "regexes": []}"#.utf8)
+        try newer.write(to: store.fileURL)
+
+        let library = RegexLibrary(store: store)
+        #expect(library.lastError?.contains("newer version") == true)
+        library.add()
+        #expect(try Data(contentsOf: store.fileURL) == newer)
+    }
+
+    @Test func editsAreSavedAfterAPause() async throws {
+        let library = RegexLibrary(store: store)
+        var regex = library.add()
+        regex.pattern = "a"
+        library.update(regex)
+        #expect(RegexLibrary(store: store).regexes.first?.pattern == "")
+
+        try await Task.sleep(for: RegexLibrary.saveDelay + .milliseconds(300))
+        #expect(RegexLibrary(store: store).regexes.first?.pattern == "a")
     }
 }

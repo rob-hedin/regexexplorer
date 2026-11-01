@@ -83,3 +83,4 @@ for language in $languages; do
     done
 done
 echo "$failures failed"
+[ "$failures" -eq 0 ]

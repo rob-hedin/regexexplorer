@@ -135,4 +135,26 @@ struct RegexEvaluatorTests {
         // It runs once the slow work finishes, on the same thread.
         #expect(await queued.value == .matches([], truncated: false))
     }
+
+    @Test func matchesAgreeWithSwiftsOwnMatching() throws {
+        // Including empty matches, which the search has to step past.
+        for (pattern, text) in [("a*", "baab"), (#"\b"#, "ab cd"), ("^", "x\ny"), ("(a)|b", "abba")] {
+            let expected = try "\(text)".matches(of: Regex(pattern)).map(\.range)
+            guard case .matches(let matches, false) = RegexEvaluator.evaluate(pattern: pattern, options: RegexOptions(), in: text) else {
+                Issue.record("Expected matches for \(pattern)")
+                continue
+            }
+            #expect(matches.map(\.range) == expected, "\(pattern)")
+        }
+    }
+
+    @Test func matchLimitStopsTheSearch() {
+        // Finding all two million matches would take far longer than this test allows.
+        let text = String(repeating: "a", count: 2_000_000)
+        let clock = ContinuousClock()
+        let elapsed = clock.measure {
+            _ = RegexEvaluator.evaluate(pattern: "a", options: RegexOptions(), in: text, matchLimit: 10)
+        }
+        #expect(elapsed < .seconds(1))
+    }
 }
